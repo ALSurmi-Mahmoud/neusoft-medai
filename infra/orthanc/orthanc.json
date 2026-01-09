@@ -1,0 +1,8 @@
+{
+  "Name": "MedAI-Orthanc",
+  "HttpPort": 8042,
+  "DicomPort": 4242,
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": false,
+  "DicomWeb": { "Enable": true }
+}

@@ -1,0 +1,13 @@
+package com.team.medaibackend;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class MedaiBackendApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}

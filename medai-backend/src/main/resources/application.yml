@@ -1,0 +1,46 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/meddb
+    username: med
+    password: medpass
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 500MB
+      max-request-size: 1GB
+      file-size-threshold: 2KB
+
+# JWT config should be at ROOT level, not under spring:
+jwt:
+  secret: mySecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLong2024!
+  expiration-ms: 3600000
+  refresh-expiration-ms: 86400000
+
+# These should also be at root level
+storage:
+  local:
+    root-path: ${user.dir}/storage
+    max-file-size: 524288000
+
+orthanc:
+  url: http://localhost:8042
+  username: orthanc
+  password: orthanc
+  aet: MEDAI
+  timeout-seconds: 30
+  enabled: false
