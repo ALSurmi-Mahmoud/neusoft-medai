@@ -49,6 +49,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/audit/**").hasRole("ADMIN")
 
+                        // Nurse/Technician specific
+                        .requestMatchers("/api/nurse/**").hasAnyRole("ADMIN", "NURSE", "TECHNICIAN")
+
                         // Appointments - accessible by multiple roles
                         .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "PATIENT")
 
@@ -65,18 +68,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/worklist/**").hasAnyRole("ADMIN", "DOCTOR")
 
                         // Patients
-                        .requestMatchers("/api/patients/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
+                        .requestMatchers("/api/patients/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE")
 
-                        // Patient self-service
-                        .requestMatchers("/api/patient/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "PATIENT")
+                        // PACS operations
+                        .requestMatchers("/api/pacs/**").hasAnyRole("ADMIN", "TECHNICIAN")
 
-                        // PACS
-                        .requestMatchers("/api/pacs/**").hasAnyRole("ADMIN", "DOCTOR")
-
-                        // AI
+                        // AI endpoints
                         .requestMatchers("/api/ai/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER")
 
-                        // All other authenticated
+                        // Fallback - require authentication for all other requests
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

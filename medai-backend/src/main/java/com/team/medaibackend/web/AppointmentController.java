@@ -179,6 +179,7 @@ public class AppointmentController {
 
     // Updated create appointment to allow booking for patient without requiring patientId
     @PostMapping
+    // Updated create appointment to allow booking for patient without requiring patientId
     public ResponseEntity<?> createAppointment(@RequestBody Map<String, Object> request, Authentication authentication) {
         try {
             Appointment apt = new Appointment();
@@ -189,14 +190,22 @@ public class AppointmentController {
 
             // If patient is booking, link to their patient record
             if (currentUser != null && "PATIENT".equals(currentUser.getPrimaryRole())) {
-                // Find or create patient record for this user
-                Patient patient = patientRepository.findByUser_Email(currentUser.getEmail()).orElse(null);
+                // First try to find by patientId (P-{userId})
+                String expectedPatientId = "P-" + currentUser.getId();
+                Patient patient = patientRepository.findByPatientId(expectedPatientId).orElse(null);
+
+                // If not found by patientId, try by user email relationship
                 if (patient == null) {
-                    // Create patient record
+                    patient = patientRepository.findByUser_Email(currentUser.getEmail()).orElse(null);
+                }
+
+                // If still not found, create a new patient record
+                if (patient == null) {
                     patient = new Patient();
-                    patient.setPatientId("P-" + currentUser.getId());
+                    patient.setPatientId(expectedPatientId);
                     patient.setName(currentUser.getFullName());
                     patient.setEmail(currentUser.getEmail());
+                    patient.setUser(currentUser);  // Important: set the user relationship!
                     patient = patientRepository.save(patient);
                 }
                 apt.setPatient(patient);
@@ -211,12 +220,31 @@ public class AppointmentController {
             if (request.containsKey("doctorId")) {
                 Long doctorId = Long.valueOf(request.get("doctorId").toString());
                 User doctor = userRepository.findById(doctorId).orElse(null);
+                if (doctor == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Doctor not found with ID: " + doctorId));
+                }
                 apt.setDoctor(doctor);
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("message", "doctorId is required"));
             }
 
-            // Set date and time
-            apt.setAppointmentDate(LocalDate.parse(request.get("date").toString()));
-            apt.setAppointmentTime(LocalTime.parse(request.get("time").toString()));
+            // Set date and time - accept both "date"/"time" and "appointmentDate"/"appointmentTime"
+            String dateStr = request.containsKey("date") ?
+                    request.get("date").toString() :
+                    request.containsKey("appointmentDate") ?
+                            request.get("appointmentDate").toString() : null;
+
+            String timeStr = request.containsKey("time") ?
+                    request.get("time").toString() :
+                    request.containsKey("appointmentTime") ?
+                            request.get("appointmentTime").toString() : null;
+
+            if (dateStr == null || timeStr == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Date and time are required"));
+            }
+
+            apt.setAppointmentDate(LocalDate.parse(dateStr));
+            apt.setAppointmentTime(LocalTime.parse(timeStr));
 
             // Set optional fields
             if (request.containsKey("type")) {
@@ -260,12 +288,22 @@ public class AppointmentController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateAppointment(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         return appointmentRepository.findById(id).map(apt -> {
-            if (request.containsKey("date")) {
-                apt.setAppointmentDate(LocalDate.parse(request.get("date").toString()));
+            // Set date and time - accept both "date"/"time" and "appointmentDate"/"appointmentTime"
+            String dateStr = request.containsKey("date") ?
+                    request.get("date").toString() :
+                    request.containsKey("appointmentDate") ?
+                            request.get("appointmentDate").toString() : null;
+
+            String timeStr = request.containsKey("time") ?
+                    request.get("time").toString() :
+                    request.containsKey("appointmentTime") ?
+                            request.get("appointmentTime").toString() : null;
+
+            if (dateStr != null && timeStr != null) {
+                apt.setAppointmentDate(LocalDate.parse(dateStr));
+                apt.setAppointmentTime(LocalTime.parse(timeStr));
             }
-            if (request.containsKey("time")) {
-                apt.setAppointmentTime(LocalTime.parse(request.get("time").toString()));
-            }
+
             if (request.containsKey("type")) {
                 apt.setAppointmentType((String) request.get("type"));
             }
@@ -290,6 +328,7 @@ public class AppointmentController {
             return ResponseEntity.ok(Map.of("message", "Appointment updated", "appointment", toDto(apt)));
         }).orElse(ResponseEntity.notFound().build());
     }
+
 
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateAppointmentStatus(@PathVariable Long id, @RequestBody Map<String, String> request) {
