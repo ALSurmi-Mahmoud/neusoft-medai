@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/nurse/**").hasAnyRole("ADMIN", "NURSE", "TECHNICIAN")
 
                         // Appointments - accessible by multiple roles
-                        .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "PATIENT")
+                        .requestMatchers("/api/appointments/**").authenticated()
 
                         // Studies - accessible by medical staff
                         .requestMatchers("/api/studies/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN", "RESEARCHER")
@@ -75,6 +75,8 @@ public class SecurityConfig {
 
                         // AI endpoints
                         .requestMatchers("/api/ai/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER")
+
+                        .requestMatchers("/api/uploads/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
 
                         // Fallback - require authentication for all other requests
                         .anyRequest().authenticated()

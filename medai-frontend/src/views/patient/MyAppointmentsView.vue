@@ -233,18 +233,19 @@ export default {
 
       submitting.value = true
       try {
-        // Get current user's patient info
-        // const user = JSON.parse(localStorage.getItem('user') || '{}')
+        // Create appointment - UNCOMMENTED
+        const response = await http.post('/appointments', {
+          doctorId: bookForm.doctorId,
+          date: new Date(bookForm.date).toISOString().split('T')[0],
+          time: bookForm.time,
+          type: bookForm.type,
+          reason: bookForm.reason,
+          notes: bookForm.reason
+        })
 
-        // Create appointment
-        // const response = await http.post('/appointments', {
-        //   doctorId: bookForm.doctorId,
-        //   date: new Date(bookForm.date).toISOString().split('T')[0],
-        //   time: bookForm.time,
-        //   type: bookForm.type,
-        //   reason: bookForm.reason,
-        //   notes: bookForm.reason
-        // })
+        ElMessage.success('Appointment booked successfully!')
+        bookDialogVisible.value = false
+        loadAppointments()
 
         ElMessage.success('Appointment booked successfully!')
         bookDialogVisible.value = false
