@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/meddb
+    url: jdbc:postgresql://127.0.0.1:5432/meddb?sslmode=disable&ApplicationName=medai-backend
     username: med
     password: medpass
 

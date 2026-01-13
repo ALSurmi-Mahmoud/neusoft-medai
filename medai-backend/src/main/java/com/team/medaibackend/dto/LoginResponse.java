@@ -1,10 +1,13 @@
 package com.team.medaibackend.dto;
 
+import java.util.List;
+
 public class LoginResponse {
     private String accessToken;
     private String refreshToken;
     private String tokenType = "Bearer";
     private Long expiresIn;
+    private List<String> roles;  // NEW: roles array at root level
     private UserInfo user;
 
     public static class UserInfo {
@@ -51,6 +54,9 @@ public class LoginResponse {
 
     public Long getExpiresIn() { return expiresIn; }
     public void setExpiresIn(Long expiresIn) { this.expiresIn = expiresIn; }
+
+    public List<String> getRoles() { return roles; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
 
     public UserInfo getUser() { return user; }
     public void setUser(UserInfo user) { this.user = user; }

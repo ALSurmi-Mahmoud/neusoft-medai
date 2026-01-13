@@ -33,7 +33,7 @@ services:
       - minio_data:/data
 
   orthanc:
-    image: orthancteam/orthanc:1.12.10
+    image: orthancteam/orthanc:25.12.3
     container_name: medai-orthanc
     ports:
       - "8042:8042"

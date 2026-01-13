@@ -13,9 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Service
@@ -41,39 +39,8 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        System.out.println("=== LOGIN DEBUG START ===");
-        System.out.println("Request username: " + request.getUsername());
-        System.out.println("Request password length: " + (request.getPassword() != null ? request.getPassword().length() : "null"));
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> {
-                    System.out.println("ERROR: User not found in database");
-                    return new RuntimeException("Invalid username or password");
-                });
-
-        System.out.println("User found - ID: " + user.getId());
-        System.out.println("User password hash: " + (user.getPassword() != null ? user.getPassword().substring(0, Math.min(30, user.getPassword().length())) : "NULL"));
-        System.out.println("User password hash length: " + (user.getPassword() != null ? user.getPassword().length() : "null"));
-        System.out.println("User enabled: " + user.getEnabled());
-        System.out.println("User roles count: " + (user.getRoles() != null ? user.getRoles().size() : "null"));
-
-        String passwordHash = user.getPassword();
-        System.out.println("  - Password hash retrieved: " + (passwordHash != null));
-        if (passwordHash != null) {
-            System.out.println("  - Password hash length: " + passwordHash.length());
-            System.out.println("  - Password hash FULL: " + passwordHash);  // ← CHANGE THIS LINE
-            System.out.println("  - Expected hash: $2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG");
-            System.out.println("  - Hashes equal: " + passwordHash.equals("$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG"));
-        }
-
-        boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        System.out.println("Password matches: " + matches);
-        if (!matches) {
-            System.out.println("ERROR: Password does not match!");
-            System.out.println("=== LOGIN DEBUG END ===");
-            throw new RuntimeException("Invalid username or password");
-        }
-
-        System.out.println("=== LOGIN DEBUG END - SUCCESS ===");
+                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid username or password");
@@ -173,12 +140,6 @@ public class AuthService {
         response.setRefreshToken(refreshToken);
         response.setTokenType("Bearer");
         response.setExpiresIn(86400L);
-
-        // NEW: Add roles array at root level with ROLE_ prefix
-        List<String> roles = new ArrayList<>();
-        String primaryRole = user.getPrimaryRole();
-        roles.add("ROLE_" + primaryRole);
-        response.setRoles(roles);
 
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
         userInfo.setId(user.getId());
