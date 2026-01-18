@@ -233,10 +233,12 @@ export default {
 
       submitting.value = true
       try {
+        const selectedDate = new Date(bookForm.date)
+        const localDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
         // Create appointment - UNCOMMENTED
         const response = await http.post('/appointments', {
           doctorId: bookForm.doctorId,
-          date: new Date(bookForm.date).toISOString().split('T')[0],
+          date: localDateStr,  // Use local date string
           time: bookForm.time,
           type: bookForm.type,
           reason: bookForm.reason,

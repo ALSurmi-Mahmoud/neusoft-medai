@@ -1,8 +1,10 @@
+// file: src/main/java/com/team/medaibackend/config/SecurityConfig.java
 package com.team.medaibackend.config;
 
 import com.team.medaibackend.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -41,44 +43,32 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
                         .requestMatchers("/api/health", "/api/redis/ping").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Admin only
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/audit/**").hasRole("ADMIN")
 
-                        // Nurse/Technician specific
-                        .requestMatchers("/api/nurse/**").hasAnyRole("ADMIN", "NURSE", "TECHNICIAN")
-
-                        // Appointments - accessible by multiple roles
                         .requestMatchers("/api/appointments/**").authenticated()
 
-                        // Studies - accessible by medical staff
+                        .requestMatchers("/api/patients/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
                         .requestMatchers("/api/studies/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN", "RESEARCHER")
 
-                        // Images/Upload - accessible by medical staff
                         .requestMatchers("/api/images/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
-
-                        // Reports
-                        .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER")
-
-                        // Worklist
-                        .requestMatchers("/api/worklist/**").hasAnyRole("ADMIN", "DOCTOR")
-
-                        // Patients
-                        .requestMatchers("/api/patients/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE")
-
-                        // PACS operations
-                        .requestMatchers("/api/pacs/**").hasAnyRole("ADMIN", "TECHNICIAN")
-
-                        // AI endpoints
-                        .requestMatchers("/api/ai/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER")
-
                         .requestMatchers("/api/uploads/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
 
-                        // Fallback - require authentication for all other requests
+                        // Reports - doctors create, patients can view their own
+                        .requestMatchers(HttpMethod.POST, "/api/reports/**").hasAnyRole("ADMIN", "DOCTOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/reports/**").hasAnyRole("ADMIN", "DOCTOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/reports/**").hasAnyRole("ADMIN", "DOCTOR")
+                        .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER", "PATIENT")
+
+                        .requestMatchers("/api/worklist/**").hasAnyRole("ADMIN", "DOCTOR")
+                        .requestMatchers("/api/nurse/**").hasAnyRole("ADMIN", "NURSE", "TECHNICIAN")
+                        .requestMatchers("/api/pacs/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        .requestMatchers("/api/ai/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER")
+                        .requestMatchers("/api/dicom/**", "/api/storage/**").hasAnyRole("ADMIN", "DOCTOR", "TECHNICIAN")
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

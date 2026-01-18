@@ -227,7 +227,18 @@ export default {
           finalized: data.finalized
         })
 
-        await loadStudy(data.studyId)
+        // ✅ FIX: Only load study if studyId exists (not null)
+        if (data.studyId) {
+          // AFTER (WORKS):
+          if (data.studyId) {
+            await loadStudy(data.studyId)
+          } else {
+            studyInfo.value = {}
+          }
+        } else {
+          // General report without a study - clear study info
+          studyInfo.value = {}
+        }
       } catch (error) {
         console.error('Failed to load report:', error)
         ElMessage.error('Failed to load report')
@@ -239,6 +250,9 @@ export default {
     const saveDraft = async () => {
       saving.value = true
       try {
+        // Get current user info
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+
         if (isEditing.value) {
           await http.put(`/reports/${report.id}`, {
             title: report.title,
@@ -247,6 +261,8 @@ export default {
             impression: report.impression,
             recommendations: report.recommendations,
             status: 'draft'
+          }, {
+            params: { userId: user.id }  // ← ADD userId
           })
           ElMessage.success('Report saved')
         } else {
@@ -257,6 +273,8 @@ export default {
             findings: report.findings,
             impression: report.impression,
             recommendations: report.recommendations
+          }, {
+            params: { authorId: user.id }  // ← ADD authorId
           })
           report.id = response.data.id
           ElMessage.success('Report created')
@@ -292,7 +310,10 @@ export default {
           await saveDraft()
         }
 
-        await http.post(`/reports/${report.id}/finalize`)
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        await http.post(`/reports/${report.id}/finalize`, null, {
+          params: { userId: user.id }
+        })
         report.finalized = true
         report.status = 'finalized'
         ElMessage.success('Report finalized')
@@ -339,13 +360,26 @@ RECOMMENDATIONS: Clinical correlation recommended. Follow-up as clinically indic
     }
 
     onMounted(async () => {
-      if (route.params.id) {
-        // Editing existing report
-        await loadReport(route.params.id)
-      } else if (route.params.studyId) {
-        // Creating new report for study
-        report.studyId = parseInt(route.params.studyId)
-        await loadStudy(report.studyId)
+      // Get studyId from route params or query
+      const studyId = route.params.studyId || route.query.studyId
+
+      if (studyId) {
+        const studyIdNum = parseInt(studyId)
+        if (!isNaN(studyIdNum)) {
+          report.studyId = studyIdNum
+          await loadStudy(studyId) // keep studyId as-is for API path compatibility
+        }
+      }
+
+      // Get reportId from route params
+      const reportId = route.params.id
+      if (reportId && reportId !== 'new') {
+        await loadReport(reportId)
+      }
+
+      // If no studyId, show warning
+      if (!report.studyId) {
+        console.warn('No studyId provided for report creation')
       }
     })
 

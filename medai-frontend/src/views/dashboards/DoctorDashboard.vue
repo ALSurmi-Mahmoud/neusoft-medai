@@ -87,7 +87,7 @@
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>Today's Appointments</span>
+              <span>Schedule for Today</span>
               <el-button text type="primary" @click="$router.push('/appointments')">View All</el-button>
             </div>
           </template>

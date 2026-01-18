@@ -1,3 +1,4 @@
+// file: src/main/java/com/team/medaibackend/service/ReportService.java
 package com.team.medaibackend.service;
 
 import com.team.medaibackend.dto.CreateReportRequest;
@@ -41,11 +42,15 @@ public class ReportService {
 
     @Transactional
     public ReportDto createReport(CreateReportRequest request, Long authorId) {
-        Study study = studyRepository.findById(request.getStudyId())
-                .orElseThrow(() -> new RuntimeException("Study not found: " + request.getStudyId()));
-
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new RuntimeException("Author not found: " + authorId));
+
+        // Handle null studyId - allow reports without studies
+        Study study = null;
+        if (request.getStudyId() != null) {
+            study = studyRepository.findById(request.getStudyId())
+                    .orElseThrow(() -> new RuntimeException("Study not found: " + request.getStudyId()));
+        }
 
         Report report = new Report();
         report.setReportUid(generateReportUid());
@@ -62,7 +67,6 @@ public class ReportService {
 
         Report saved = reportRepository.save(report);
 
-        // Audit log
         auditService.log(AuditService.ACTION_CREATE, "REPORT", saved.getReportUid(),
                 authorId, author.getUsername());
 
@@ -91,7 +95,6 @@ public class ReportService {
 
         Report saved = reportRepository.save(report);
 
-        // Audit log
         auditService.log(AuditService.ACTION_UPDATE, "REPORT", saved.getReportUid(),
                 userId, user.getUsername());
 
@@ -116,7 +119,6 @@ public class ReportService {
 
         Report saved = reportRepository.save(report);
 
-        // Audit log
         auditService.log(AuditService.ACTION_FINALIZE, "REPORT", saved.getReportUid(),
                 userId, user.getUsername());
 
@@ -138,7 +140,6 @@ public class ReportService {
         String reportUid = report.getReportUid();
         reportRepository.delete(report);
 
-        // Audit log
         auditService.log(AuditService.ACTION_DELETE, "REPORT", reportUid,
                 userId, user.getUsername());
     }
@@ -170,6 +171,14 @@ public class ReportService {
         return reportRepository.findAll(pageable).map(this::toDto);
     }
 
+    // ✅ NEW: used by /api/reports/patient
+    @Transactional(readOnly = true)
+    public List<ReportDto> getReportsByPatientDbId(Long patientDbId) {
+        return reportRepository.findByPatientId(patientDbId).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     private String generateReportUid() {
         return "RPT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
@@ -178,9 +187,17 @@ public class ReportService {
         ReportDto dto = new ReportDto();
         dto.setId(report.getId());
         dto.setReportUid(report.getReportUid());
-        dto.setStudyId(report.getStudy().getId());
-        dto.setStudyUid(report.getStudy().getStudyUid());
-        dto.setPatientId(report.getStudy().getPatient().getPatientId());
+
+        // Handle null study (for general reports)
+        if (report.getStudy() != null) {
+            dto.setStudyId(report.getStudy().getId());
+            dto.setStudyUid(report.getStudy().getStudyUid());
+            if (report.getStudy().getPatient() != null) {
+                dto.setPatientId(report.getStudy().getPatient().getPatientId());
+                dto.setPatientName(report.getStudy().getPatient().getName());
+            }
+        }
+
         dto.setAuthorId(report.getAuthor().getId());
         dto.setAuthorName(report.getAuthor().getFullName() != null ?
                 report.getAuthor().getFullName() : report.getAuthor().getUsername());

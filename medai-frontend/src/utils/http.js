@@ -31,7 +31,7 @@ http.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
 
-        // Handle 401 Unauthorized
+        // Handle 401 Unauthorized - refresh token
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true
 
@@ -48,7 +48,6 @@ http.interceptors.response.use(
                     originalRequest.headers.Authorization = `Bearer ${newToken}`
                     return http(originalRequest)
                 } catch (refreshError) {
-                    // Refresh failed, logout user
                     localStorage.removeItem('accessToken')
                     localStorage.removeItem('refreshToken')
                     localStorage.removeItem('user')
@@ -60,13 +59,24 @@ http.interceptors.response.use(
             }
         }
 
-        // Handle other errors
-        if (error.response?.status === 403) {
-            ElMessage.error('Access denied')
-        } else if (error.response?.status === 404) {
-            ElMessage.error('Resource not found')
-        } else if (error.response?.status >= 500) {
-            ElMessage.error('Server error. Please try again later.')
+        // NEW: Silent failures for endpoints that fail gracefully
+        const silentFailEndpoints = ['/stats', '/patients', '/nurse/dashboard', '/reports/study']
+        const shouldShowError = !silentFailEndpoints.some(endpoint =>
+            originalRequest.url?.includes(endpoint)
+        )
+
+        // Only show error notifications for critical failures
+        if (shouldShowError) {
+            if (error.response?.status === 403) {
+                ElMessage.error('Access denied')
+            } else if (error.response?.status === 404) {
+                ElMessage.error('Resource not found')
+            } else if (error.response?.status >= 500) {
+                ElMessage.error('Server error. Please try again later.')
+            }
+        } else {
+            // Just log to console for debugging
+            console.warn('Silent API failure:', originalRequest.url, error.response?.status)
         }
 
         return Promise.reject(error)

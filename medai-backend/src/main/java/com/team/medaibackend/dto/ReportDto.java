@@ -22,6 +22,7 @@ public class ReportDto {
     private LocalDateTime finalizedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String patientName;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -77,4 +78,7 @@ public class ReportDto {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getPatientName() { return patientName; }
+    public void setPatientName(String patientName) { this.patientName = patientName; }
 }

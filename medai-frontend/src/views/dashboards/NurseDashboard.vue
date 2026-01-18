@@ -61,8 +61,8 @@
             <el-button type="primary" size="large" @click="$router.push('/upload')">
               <el-icon><Upload /></el-icon> Upload Images
             </el-button>
-            <el-button type="success" size="large" @click="$router.push('/appointments')">
-              <el-icon><Calendar /></el-icon> View Appointments
+            <el-button type="success" size="large" @click="$router.push('/nurse/schedule')">
+              <el-icon><Calendar /></el-icon> View Schedule
             </el-button>
             <el-button type="info" size="large" @click="$router.push('/studies')">
               <el-icon><FolderOpened /></el-icon> View Studies

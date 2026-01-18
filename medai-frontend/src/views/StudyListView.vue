@@ -364,14 +364,14 @@ export default {
     // Get tag type for status
     const getStatusType = (status) => {
       const types = {
-        'uploaded': 'info',
+        'uploaded': 'success',
         'processing': 'warning',
-        'processed': 'success',
         'completed': 'success',
-        'archived': '',
-        'failed': 'danger'
+        'failed': 'danger',
+        'pending': 'info',
+        'available': 'success'
       }
-      return types[status] || 'info'
+      return types[status?.toLowerCase()] || 'info'
     }
 
     onMounted(() => {
@@ -394,7 +394,7 @@ export default {
       deleteStudy,
       formatDateTime,
       getModalityType,
-      getStatusType
+      getStatusType,
     }
   }
 }

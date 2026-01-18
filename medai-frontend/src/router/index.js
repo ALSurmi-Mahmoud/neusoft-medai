@@ -1,3 +1,4 @@
+// src/router/index.js (or src/router/index.ts)
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
@@ -92,7 +93,7 @@ const routes = [
                 meta: { title: 'New Report', roles: ['DOCTOR'] }
             },
             {
-                path: 'reports/edit/:id',
+                path: 'reports/:id/edit',  // ← CHANGED ORDER
                 name: 'EditReport',
                 component: () => import('../views/ReportEditorView.vue'),
                 meta: { title: 'Edit Report', roles: ['DOCTOR'] }
@@ -104,6 +105,12 @@ const routes = [
                 name: 'Upload',
                 component: () => import('../views/UploadView.vue'),
                 meta: { title: 'Upload Images', roles: ['NURSE', 'TECHNICIAN'] }
+            },
+            {
+                path: 'nurse/schedule',
+                name: 'NurseSchedule',
+                component: () => import('../views/nurse/ScheduleView.vue'),
+                meta: { title: 'Today\'s Schedule', roles: ['NURSE', 'TECHNICIAN'] }
             },
 
             // SHARED routes (multiple roles)
@@ -198,7 +205,6 @@ router.beforeEach((to, from, next) => {
     // Check role-based access
     if (to.meta.roles && to.meta.roles.length > 0) {
         if (!to.meta.roles.includes(userRole)) {
-            // User doesn't have permission - redirect to their dashboard
             next(getDashboardForRole(userRole))
             return
         }
@@ -209,12 +215,12 @@ router.beforeEach((to, from, next) => {
 
 function getDashboardForRole(role) {
     const dashboards = {
-        'ADMIN': '/admin-dashboard',
-        'DOCTOR': '/doctor-dashboard',
-        'NURSE': '/nurse-dashboard',
-        'TECHNICIAN': '/nurse-dashboard',
-        'RESEARCHER': '/studies',
-        'PATIENT': '/patient-dashboard'
+        ADMIN: '/admin-dashboard',
+        DOCTOR: '/doctor-dashboard',
+        NURSE: '/nurse-dashboard',
+        TECHNICIAN: '/nurse-dashboard',
+        RESEARCHER: '/studies',
+        PATIENT: '/patient-dashboard'
     }
     return dashboards[role] || '/login'
 }

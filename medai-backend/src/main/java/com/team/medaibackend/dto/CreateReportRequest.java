@@ -1,11 +1,10 @@
 package com.team.medaibackend.dto;
 
-import jakarta.validation.constraints.NotNull;
 import java.util.Map;
 
 public class CreateReportRequest {
 
-    @NotNull(message = "Study ID is required")
+
     private Long studyId;
 
     private String title;

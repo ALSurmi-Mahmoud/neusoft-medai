@@ -1,10 +1,15 @@
+// file: src/main/java/com/team/medaibackend/web/ReportController.java
 package com.team.medaibackend.web;
 
 import com.team.medaibackend.dto.CreateReportRequest;
 import com.team.medaibackend.dto.ReportDto;
 import com.team.medaibackend.dto.UpdateReportRequest;
+import com.team.medaibackend.entity.Patient;
 import com.team.medaibackend.entity.Report;
+import com.team.medaibackend.entity.User;
+import com.team.medaibackend.repository.PatientRepository;
 import com.team.medaibackend.repository.ReportRepository;
+import com.team.medaibackend.repository.UserRepository;
 import com.team.medaibackend.service.AuditService;
 import com.team.medaibackend.service.ReportService;
 import jakarta.validation.Valid;
@@ -13,13 +18,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -29,17 +32,21 @@ public class ReportController {
     private final ReportRepository reportRepository;
     private final AuditService auditService;
 
+    private final UserRepository userRepository;
+    private final PatientRepository patientRepository;
+
     public ReportController(ReportService reportService,
                             ReportRepository reportRepository,
-                            AuditService auditService) {
+                            AuditService auditService,
+                            UserRepository userRepository,
+                            PatientRepository patientRepository) {
         this.reportService = reportService;
         this.reportRepository = reportRepository;
         this.auditService = auditService;
+        this.userRepository = userRepository;
+        this.patientRepository = patientRepository;
     }
 
-    /**
-     * Create a new diagnostic report.
-     */
     @PostMapping
     public ResponseEntity<ReportDto> createReport(
             @Valid @RequestBody CreateReportRequest request,
@@ -49,9 +56,6 @@ public class ReportController {
         return ResponseEntity.ok(report);
     }
 
-    /**
-     * Get all reports with pagination.
-     */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllReports(
             @RequestParam(defaultValue = "0") int page,
@@ -69,36 +73,24 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Get report by ID.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<ReportDto> getReport(@PathVariable Long id) {
         ReportDto report = reportService.getReport(id);
         return ResponseEntity.ok(report);
     }
 
-    /**
-     * Get report by UID.
-     */
     @GetMapping("/uid/{reportUid}")
     public ResponseEntity<ReportDto> getReportByUid(@PathVariable String reportUid) {
         ReportDto report = reportService.getReportByUid(reportUid);
         return ResponseEntity.ok(report);
     }
 
-    /**
-     * Get reports for a specific study.
-     */
     @GetMapping("/study/{studyId}")
     public ResponseEntity<List<ReportDto>> getReportsByStudy(@PathVariable Long studyId) {
         List<ReportDto> reports = reportService.getReportsByStudy(studyId);
         return ResponseEntity.ok(reports);
     }
 
-    /**
-     * Update an existing report.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<ReportDto> updateReport(
             @PathVariable Long id,
@@ -109,9 +101,6 @@ public class ReportController {
         return ResponseEntity.ok(report);
     }
 
-    /**
-     * Finalize a report (makes it read-only).
-     */
     @PostMapping("/{id}/finalize")
     public ResponseEntity<ReportDto> finalizeReport(
             @PathVariable Long id,
@@ -121,9 +110,6 @@ public class ReportController {
         return ResponseEntity.ok(report);
     }
 
-    /**
-     * Delete a draft report.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> deleteReport(
             @PathVariable Long id,
@@ -136,6 +122,91 @@ public class ReportController {
         response.put("message", "Report deleted successfully");
 
         return ResponseEntity.ok(response);
+    }
+
+    // ✅ FIXED: patient reports endpoint
+    @GetMapping("/patient")
+    public ResponseEntity<List<Map<String, Object>>> getPatientReports(Authentication authentication) {
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        // Find patient record linked to this user
+        Patient patient = patientRepository.findByUser_Email(user.getEmail()).orElse(null);
+
+        if (patient == null) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        // Get all reports for this patient
+        List<Report> reports = reportRepository.findByPatientId(patient.getId());
+
+        List<Map<String, Object>> result = reports.stream().map(report -> {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", report.getId());
+            dto.put("reportUid", report.getReportUid());
+            dto.put("title", report.getTitle());
+            dto.put("reportDate", report.getCreatedAt() != null ?
+                    report.getCreatedAt().toLocalDate() : null);
+            dto.put("status", report.getFinalized() ? "completed" : "draft");
+            dto.put("reportType", report.getStudy() != null ?
+                    report.getStudy().getModality() : "General");
+            dto.put("findings", report.getFindings());
+            dto.put("impression", report.getImpression());
+            dto.put("recommendations", report.getRecommendations());
+            dto.put("doctorName", report.getAuthor() != null ?
+                    report.getAuthor().getFullName() : "Unknown");
+            dto.put("notes", report.getSummary());
+            return dto;
+        }).toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/patient/{patientId}")
+    public ResponseEntity<?> createPatientReport(
+            @PathVariable Long patientId,
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        User doctor = userRepository.findByUsername(username).orElse(null);
+
+        if (doctor == null) {
+            return ResponseEntity.status(403).body(Map.of("message", "Authentication required"));
+        }
+
+        Patient patient = patientRepository.findById(patientId).orElse(null);
+        if (patient == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Create a general report (no study link)
+        Report report = new Report();
+        report.setReportUid("RPT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        report.setAuthor(doctor);
+        // Note: Study will be null for general reports
+        report.setTitle((String) request.get("title"));
+        report.setSummary((String) request.get("summary"));
+        report.setFindings((String) request.get("findings"));
+        report.setImpression((String) request.get("impression"));
+        report.setRecommendations((String) request.get("recommendations"));
+        report.setStatus("draft");
+        report.setFinalized(false);
+
+        report = reportRepository.save(report);
+
+        auditService.log("CREATE", "REPORT", report.getReportUid(),
+                doctor.getId(), doctor.getUsername());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Report created",
+                "id", report.getId(),
+                "reportUid", report.getReportUid()
+        ));
     }
 
     @GetMapping("/{id}/export/pdf")
@@ -197,4 +268,5 @@ public class ReportController {
 
         return new ResponseEntity<>(htmlBytes, headers, HttpStatus.OK);
     }
+
 }

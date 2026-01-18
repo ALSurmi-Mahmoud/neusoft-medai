@@ -37,7 +37,17 @@
             {{ row.title || 'Untitled Report' }}
           </template>
         </el-table-column>
-        <el-table-column prop="patientId" label="Patient" width="130" />
+        <el-table-column label="Patient" width="200">
+          <template #default="{ row }">
+            <div v-if="row.patientName">
+              <div style="font-weight: 500;">{{ row.patientName }}</div>
+              <div style="font-size: 11px; color: #909399;">{{ row.patientId }}</div>
+            </div>
+            <div v-else>
+              {{ row.patientId || 'N/A' }}
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="authorName" label="Author" width="150" />
         <el-table-column prop="status" label="Status" width="110">
           <template #default="{ row }">

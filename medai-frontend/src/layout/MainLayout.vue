@@ -82,27 +82,33 @@
         </template>
 
         <!-- NURSE/TECHNICIAN MENU - Upload and scheduling -->
-        <template v-else-if="userRole === 'NURSE' || userRole === 'TECHNICIAN'">
-          <el-menu-item index="/nurse-dashboard">
-            <el-icon><Odometer /></el-icon>
-            <span>Dashboard</span>
-          </el-menu-item>
+        <!-- Schedule/Appointments - Role-based -->
+        <el-menu-item
+            v-if="userRole === 'NURSE' || userRole === 'TECHNICIAN'"
+            index="/nurse/schedule"
+        >
+          <el-icon><Calendar /></el-icon>
+          <span>Schedule</span>
+        </el-menu-item>
 
-          <el-menu-item index="/upload">
-            <el-icon><Upload /></el-icon>
-            <span>Upload Images</span>
-          </el-menu-item>
 
-          <el-menu-item index="/studies">
-            <el-icon><FolderOpened /></el-icon>
-            <span>Studies</span>
-          </el-menu-item>
 
-          <el-menu-item index="/appointments">
-            <el-icon><Calendar /></el-icon>
-            <span>Appointments</span>
-          </el-menu-item>
-        </template>
+        <el-menu-item
+            v-else-if="userRole === 'PATIENT'"
+            index="/patient/appointments"
+        >
+          <el-icon><Calendar /></el-icon>
+          <span>My Appointments</span>
+        </el-menu-item>
+
+        <!-- Studies - for medical staff -->
+        <el-menu-item
+            v-if="userRole === 'NURSE' || userRole === 'TECHNICIAN'"
+            index="/studies"
+        >
+          <el-icon><FolderOpened /></el-icon>
+          <span>Studies</span>
+        </el-menu-item>
 
         <!-- RESEARCHER MENU - Data and AI -->
         <template v-else-if="userRole === 'RESEARCHER'">

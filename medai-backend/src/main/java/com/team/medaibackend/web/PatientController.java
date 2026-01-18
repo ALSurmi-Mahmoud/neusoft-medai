@@ -149,4 +149,25 @@ public class PatientController {
 
         return ResponseEntity.ok(result);
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<Map<String, Object>>> getAllPatients(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+
+        List<Patient> patients = patientRepository.findAll();
+
+        List<Map<String, Object>> result = patients.stream().map(patient -> {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", patient.getId());
+            dto.put("patientId", patient.getPatientId());
+            dto.put("name", patient.getName());
+            dto.put("sex", patient.getSex());
+            dto.put("birthDate", patient.getBirthDate());
+            return dto;
+        }).toList();
+
+        return ResponseEntity.ok(result);
+    }
+
 }

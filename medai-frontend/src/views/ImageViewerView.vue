@@ -1,3 +1,4 @@
+
 <template>
   <div class="image-viewer">
     <!-- Toolbar -->
@@ -108,33 +109,80 @@
             class="viewer-canvas"
             @wheel="handleScroll"
         >
+          <!-- Loading State -->
           <!-- Cornerstone viewport will be rendered here -->
           <div v-if="loading" class="viewer-loading">
             <el-icon class="is-loading" :size="48"><Loading /></el-icon>
-            <p>Loading image...</p>
+            <p>Loading study information...</p>
           </div>
 
-          <div v-if="!loading && !hasImages" class="viewer-placeholder">
+          <!-- Show placeholder after loading completes -->
+          <div v-if="!loading" class="viewer-placeholder" style="text-align: center; padding: 50px;">
+            <el-icon :size="80" style="color: #e6a23c"><Warning /></el-icon>
+            <h2 style="margin: 20px 0; color: #333;">DICOM Image Viewer - Coming Soon</h2>
+            <p style="color: #606266; max-width: 600px; margin: 0 auto 10px;">
+              Your medical images have been <strong style="color: #67c23a;">successfully uploaded</strong>
+              and stored in the system.
+            </p>
+            <p style="color: #909399; margin: 10px auto; max-width: 600px;">
+              The interactive DICOM viewer requires Cornerstone.js library integration.
+              This advanced feature will be implemented in Phase 5 of the project.
+            </p>
+            <p style="margin: 20px 0; font-size: 14px; color: #909399;">
+              <strong>Study ID:</strong> {{ studyInfo?.studyUid || 'N/A' }}
+            </p>
+            <el-button type="primary" size="large" style="margin-top: 20px" @click="$router.back()">
+              <el-icon><ArrowLeft /></el-icon>
+              Back to Studies
+            </el-button>
+          </div>
+
+          <!-- Viewer Not Implemented Message -->
+
+          <div v-if="!loading && !viewerImplemented" class="viewer-placeholder">
+            <el-icon :size="64" style="color: #e6a23c"><Warning /></el-icon>
+            <h3 style="margin: 20px 0; color: #333;">DICOM Image Viewer - Coming Soon</h3>
+            <div style="max-width: 500px; text-align: center;">
+              <p style="margin: 10px 0; color: #606266;">
+                Your medical images have been <strong style="color: #67c23a;">successfully uploaded</strong>
+                and stored in the system.
+              </p>
+              <p style="margin: 10px 0; color: #909399;">
+                The interactive DICOM viewer requires Cornerstone.js library integration.
+                This feature will be implemented in Phase 5.
+              </p>
+              <p style="margin: 10px 0; font-size: 14px; color: #909399;">
+                Study ID: {{ studyInfo?.studyInstanceUid || 'Loading...' }}
+              </p>
+              <el-button type="primary" size="large" style="margin-top: 20px" @click="$router.back()">
+                <el-icon><ArrowLeft /></el-icon>
+                Back to Studies
+              </el-button>
+            </div>
+          </div>
+          <!-- Original placeholder for no images -->
+          <!-- Image overlay info -->
+          <div v-if="!loading && viewerImplemented && !hasImages" class="viewer-placeholder">
             <el-icon :size="64"><Picture /></el-icon>
-            <p>No images available</p>
+            <p>No images available in this study</p>
             <p class="hint">Upload DICOM files to view medical images</p>
           </div>
 
-          <!-- Image overlay info -->
-          <div v-if="hasImages && !loading" class="image-overlay top-left">
+          <!-- Image overlays (only show if viewer is implemented) -->
+          <div v-if="hasImages && !loading && viewerImplemented" class="image-overlay top-left">
             <div>{{ studyInfo.patientId }}</div>
             <div>{{ studyInfo.patientName }}</div>
           </div>
-          <div v-if="hasImages && !loading" class="image-overlay top-right">
+          <div v-if="hasImages && !loading && viewerImplemented" class="image-overlay top-right">
             <div>{{ studyInfo.modality }}</div>
             <div>{{ formatDate(studyInfo.studyDate) }}</div>
           </div>
-          <div v-if="hasImages && !loading" class="image-overlay bottom-left">
+          <div v-if="hasImages && !loading && viewerImplemented" class="image-overlay bottom-left">
             <div>W: {{ windowWidth }} L: {{ windowLevel }}</div>
             <div>Zoom: {{ zoomLevel }}%</div>
           </div>
-          <div v-if="hasImages && !loading" class="image-overlay bottom-right">
-            <div>Image: {{ currentIndex + 1 }}/{{ imageIds.length }}</div>
+          <div v-if="hasImages && !loading && viewerImplemented" class="image-overlay bottom-right">
+            <div>Image {{ currentIndex + 1 }} / {{ imageIds.length }}</div>
           </div>
         </div>
 
@@ -159,22 +207,39 @@
 </template>
 
 <script>
-import { ref, computed, onMounted,
-  // onUnmounted, watch
-} from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import http from '../utils/http'
 import { ElMessage } from 'element-plus'
+
 import {
-  Sunny, ZoomIn, Rank, RefreshRight, ArrowLeft, ArrowRight,
-  Document, Back, Loading, Picture
+  Sunny,
+  ZoomIn,
+  Rank,
+  RefreshRight,
+  ArrowLeft,
+  ArrowRight,
+  Document,
+  Back,
+  Loading,
+  Picture,
+  Warning,
 } from '@element-plus/icons-vue'
 
 export default {
   name: 'ImageViewerView',
   components: {
-    Sunny, ZoomIn, Rank, RefreshRight, ArrowLeft, ArrowRight,
-    Document, Back, Loading, Picture
+    Sunny,
+    ZoomIn,
+    Rank,
+    RefreshRight,
+    ArrowLeft,
+    ArrowRight,
+    Document,
+    Back,
+    Loading,
+    Picture,
+    Warning,
   },
   setup() {
     const route = useRoute()
@@ -189,11 +254,11 @@ export default {
     const currentIndex = ref(0)
     const currentTool = ref('Wwwc')
 
-    // Viewport state
     const windowWidth = ref(400)
     const windowLevel = ref(40)
     const zoomLevel = ref(100)
 
+    const viewerImplemented = ref(false)
     const hasImages = computed(() => imageIds.value.length > 0)
 
     const loadStudy = async () => {
@@ -220,39 +285,26 @@ export default {
 
     const selectSeries = (series) => {
       selectedSeriesId.value = series.id
-      // In a real implementation, this would load actual DICOM images
-      // For now, we create placeholder image IDs
-      imageIds.value = Array(series.imageCount || 1).fill(null).map((_, i) =>
-          `dicom://${series.seriesUid}/${i}`
-      )
+      imageIds.value = Array(series.imageCount || 1)
+          .fill(null)
+          .map((_, i) => `dicom://${series.seriesUid}/${i}`)
       currentIndex.value = 0
-
-      // TODO: Initialize Cornerstone.js viewer with actual DICOM files
-      // This requires the backend to serve DICOM files via WADO
       initializeViewer()
     }
 
     const initializeViewer = () => {
-      // Placeholder for Cornerstone.js initialization
-      // In production, this would:
-      // 1. Initialize cornerstone on the viewerElement
-      // 2. Load DICOM images via cornerstoneWADOImageLoader
-      // 3. Enable tools from cornerstoneTools
-
       console.log('Viewer initialized for series:', selectedSeriesId.value)
       loading.value = false
     }
 
     const setTool = (toolName) => {
       currentTool.value = toolName
-      // TODO: Activate cornerstone tool
     }
 
     const resetView = () => {
       windowWidth.value = 400
       windowLevel.value = 40
       zoomLevel.value = 100
-      // TODO: Reset cornerstone viewport
     }
 
     const previousImage = () => {
@@ -275,17 +327,13 @@ export default {
     }
 
     const loadCurrentImage = () => {
-      // TODO: Load image at currentIndex using cornerstone
       console.log('Loading image:', currentIndex.value)
     }
 
     const handleScroll = (event) => {
       event.preventDefault()
-      if (event.deltaY < 0) {
-        previousImage()
-      } else {
-        nextImage()
-      }
+      if (event.deltaY < 0) previousImage()
+      else nextImage()
     }
 
     const createReport = () => {
@@ -314,6 +362,7 @@ export default {
       windowLevel,
       zoomLevel,
       hasImages,
+      viewerImplemented,
       selectSeries,
       setTool,
       resetView,
@@ -322,11 +371,12 @@ export default {
       goToImage,
       handleScroll,
       createReport,
-      formatDate
+      formatDate,
     }
-  }
+  },
 }
 </script>
+
 
 <style scoped>
 .image-viewer {
