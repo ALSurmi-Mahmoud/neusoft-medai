@@ -6,9 +6,11 @@ import com.team.medaibackend.dto.ReportDto;
 import com.team.medaibackend.dto.UpdateReportRequest;
 import com.team.medaibackend.entity.Patient;
 import com.team.medaibackend.entity.Report;
+import com.team.medaibackend.entity.Study;
 import com.team.medaibackend.entity.User;
 import com.team.medaibackend.repository.PatientRepository;
 import com.team.medaibackend.repository.ReportRepository;
+import com.team.medaibackend.repository.StudyRepository;
 import com.team.medaibackend.repository.UserRepository;
 import com.team.medaibackend.service.AuditService;
 import com.team.medaibackend.service.ReportService;
@@ -34,17 +36,20 @@ public class ReportController {
 
     private final UserRepository userRepository;
     private final PatientRepository patientRepository;
+    private final StudyRepository studyRepository;
 
     public ReportController(ReportService reportService,
                             ReportRepository reportRepository,
                             AuditService auditService,
                             UserRepository userRepository,
-                            PatientRepository patientRepository) {
+                            PatientRepository patientRepository,
+                            StudyRepository studyRepository) {
         this.reportService = reportService;
         this.reportRepository = reportRepository;
         this.auditService = auditService;
         this.userRepository = userRepository;
         this.patientRepository = patientRepository;
+        this.studyRepository = studyRepository;
     }
 
     @PostMapping
@@ -184,11 +189,17 @@ public class ReportController {
             return ResponseEntity.notFound().build();
         }
 
-        // Create a general report (no study link)
+        // Try to find the patient's most recent study to link the report
+        Study linkedStudy = studyRepository
+                .findTopByPatient_IdOrderByStudyDateDesc(patient.getId())
+                .orElse(null);
+
+
+        // Create a general report
         Report report = new Report();
         report.setReportUid("RPT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         report.setAuthor(doctor);
-        // Note: Study will be null for general reports
+        report.setStudy(linkedStudy);  // Link to most recent study if available (can be null)
         report.setTitle((String) request.get("title"));
         report.setSummary((String) request.get("summary"));
         report.setFindings((String) request.get("findings"));
@@ -202,11 +213,15 @@ public class ReportController {
         auditService.log("CREATE", "REPORT", report.getReportUid(),
                 doctor.getId(), doctor.getUsername());
 
-        return ResponseEntity.ok(Map.of(
-                "message", "Report created",
-                "id", report.getId(),
-                "reportUid", report.getReportUid()
-        ));
+        // Return enriched response with patient info
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Report created");
+        response.put("id", report.getId());
+        response.put("reportUid", report.getReportUid());
+        response.put("patientName", patient.getName());
+        response.put("patientId", patient.getPatientId());
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/export/pdf")

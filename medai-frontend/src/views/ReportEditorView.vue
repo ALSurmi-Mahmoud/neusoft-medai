@@ -21,7 +21,7 @@
       >
         <!-- Study Info (Read-only) -->
         <el-card class="study-info-card" shadow="never">
-          <template #header>Study Information</template>
+          <template #header>Study & Patient Information</template>
           <el-row :gutter="20">
             <el-col :span="8">
               <div class="info-item">
@@ -35,6 +35,14 @@
                 <span>{{ studyInfo.patient?.patientId || '-' }}</span>
               </div>
             </el-col>
+            <el-col :span="8">
+              <div class="info-item">
+                <label>Patient Name:</label>
+                <span>{{ studyInfo.patient?.name || 'N/A (requires DICOM parsing)' }}</span>
+              </div>
+            </el-col>
+          </el-row>
+          <el-row :gutter="20" v-if="studyInfo.modality">
             <el-col :span="8">
               <div class="info-item">
                 <label>Modality:</label>
@@ -227,14 +235,9 @@ export default {
           finalized: data.finalized
         })
 
-        // ✅ FIX: Only load study if studyId exists (not null)
+        // Only load study if studyId exists (not null)
         if (data.studyId) {
-          // AFTER (WORKS):
-          if (data.studyId) {
-            await loadStudy(data.studyId)
-          } else {
-            studyInfo.value = {}
-          }
+          await loadStudy(data.studyId)
         } else {
           // General report without a study - clear study info
           studyInfo.value = {}

@@ -104,7 +104,7 @@ const routes = [
                 path: 'upload',
                 name: 'Upload',
                 component: () => import('../views/UploadView.vue'),
-                meta: { title: 'Upload Images', roles: ['NURSE', 'TECHNICIAN'] }
+                meta: { title: 'Upload Images', roles: ['DOCTOR', 'NURSE', 'TECHNICIAN'] }
             },
             {
                 path: 'nurse/schedule',

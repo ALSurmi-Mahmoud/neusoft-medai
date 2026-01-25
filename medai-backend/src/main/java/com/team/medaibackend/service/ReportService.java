@@ -199,6 +199,8 @@ public class ReportService {
         }
 
         dto.setAuthorId(report.getAuthor().getId());
+        // Author name with fallback to username (fullName is required in RegisterRequest,
+        // so fallback should only occur for legacy data or direct DB inserts)
         dto.setAuthorName(report.getAuthor().getFullName() != null ?
                 report.getAuthor().getFullName() : report.getAuthor().getUsername());
         dto.setTitle(report.getTitle());

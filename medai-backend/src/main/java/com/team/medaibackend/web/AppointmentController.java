@@ -243,8 +243,16 @@ public class AppointmentController {
                 return ResponseEntity.badRequest().body(Map.of("message", "Date and time are required"));
             }
 
-            apt.setAppointmentDate(LocalDate.parse(dateStr));
-            apt.setAppointmentTime(LocalTime.parse(timeStr));
+            try {
+                // Parse date and time with explicit ISO format (YYYY-MM-DD and HH:mm)
+                apt.setAppointmentDate(LocalDate.parse(dateStr.trim()));
+                apt.setAppointmentTime(LocalTime.parse(timeStr.trim()));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "Invalid date or time format. Expected YYYY-MM-DD and HH:mm",
+                        "error", e.getMessage()
+                ));
+            }
 
             // Set optional fields
             if (request.containsKey("type")) {
@@ -300,8 +308,14 @@ public class AppointmentController {
                             request.get("appointmentTime").toString() : null;
 
             if (dateStr != null && timeStr != null) {
-                apt.setAppointmentDate(LocalDate.parse(dateStr));
-                apt.setAppointmentTime(LocalTime.parse(timeStr));
+                try {
+                    // Parse date and time with explicit ISO format (YYYY-MM-DD and HH:mm)
+                    apt.setAppointmentDate(LocalDate.parse(dateStr.trim()));
+                    apt.setAppointmentTime(LocalTime.parse(timeStr.trim()));
+                } catch (Exception e) {
+                    // Log error but don't fail the entire update
+                    System.err.println("Failed to parse date/time: " + e.getMessage());
+                }
             }
 
             if (request.containsKey("type")) {

@@ -77,7 +77,7 @@
           <template #header>
             <div class="card-header">
               <span>Today's Schedule ({{ today }})</span>
-              <el-button text type="primary" @click="$router.push('/appointments')">View All</el-button>
+              <el-button text type="primary" @click="$router.push('/nurse/schedule')">View Full Schedule</el-button>
             </div>
           </template>
           <div v-loading="loading">
@@ -210,10 +210,11 @@ export default {
 
     const loadStats = async () => {
       try {
-        const patientsRes = await http.get('/patients', { params: { page: 0, size: 1 } })
-        stats.totalPatients = patientsRes.data.totalElements || 0
+        // Appointment stats are loaded separately by loadTodaySchedule()
+        // Nurses don't have access to /api/patients endpoint, so skip patient stats
+        stats.totalPatients = 0  // Placeholder - nurses don't manage patients directly
       } catch (error) {
-        console.error('Failed to load patient stats:', error)
+        console.error('Failed to load stats:', error)
       }
     }
 

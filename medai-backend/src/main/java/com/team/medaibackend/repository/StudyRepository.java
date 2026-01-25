@@ -41,4 +41,6 @@ public interface StudyRepository extends JpaRepository<Study, Long> {
                               Pageable pageable);
     @Query("SELECT COUNT(s) FROM Study s WHERE FUNCTION('DATE', s.createdAt) = :date")
     long countByCreatedAtDate(@Param("date") LocalDate date);
+
+    Optional<Study> findTopByPatient_IdOrderByStudyDateDesc(Long patientId);
 }
