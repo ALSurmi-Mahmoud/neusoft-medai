@@ -26,19 +26,19 @@
             <el-col :span="8">
               <div class="info-item">
                 <label>Study UID:</label>
-                <span>{{ studyInfo.studyUid || '-' }}</span>
+                <span>{{ studyInfo.studyUid || (patientInfoFromQuery.patientName ? 'General Report' : '-') }}</span>
               </div>
             </el-col>
             <el-col :span="8">
               <div class="info-item">
                 <label>Patient ID:</label>
-                <span>{{ studyInfo.patient?.patientId || '-' }}</span>
+                <span>{{ studyInfo.patient?.patientId || patientInfoFromQuery.patientId || '-' }}</span>
               </div>
             </el-col>
             <el-col :span="8">
               <div class="info-item">
                 <label>Patient Name:</label>
-                <span>{{ studyInfo.patient?.name || 'N/A (requires DICOM parsing)' }}</span>
+                <span>{{ studyInfo.patient?.name || patientInfoFromQuery.patientName || 'N/A (requires DICOM parsing)' }}</span>
               </div>
             </el-col>
           </el-row>
@@ -199,6 +199,11 @@ export default {
       status: 'draft',
       finalized: false
     })
+    // Extract patient info from query params (for appointment-based reports)
+    const patientInfoFromQuery = reactive({
+      patientId: route.query.patientId || null,
+      patientName: route.query.patientName || null
+    })
 
     const isEditing = computed(() => !!route.params.id)
 
@@ -253,9 +258,6 @@ export default {
     const saveDraft = async () => {
       saving.value = true
       try {
-        // Get current user info
-        const user = JSON.parse(localStorage.getItem('user') || '{}')
-
         if (isEditing.value) {
           await http.put(`/reports/${report.id}`, {
             title: report.title,
@@ -264,21 +266,35 @@ export default {
             impression: report.impression,
             recommendations: report.recommendations,
             status: 'draft'
-          }, {
-            params: { userId: user.id }  // ← ADD userId
           })
           ElMessage.success('Report saved')
         } else {
-          const response = await http.post('/reports', {
+          // Check if we have a patientId from query params (appointment flow)
+          const patientIdFromQuery = route.query.patientId
+
+          let endpoint = '/reports'
+          let payload = {
             studyId: report.studyId,
             title: report.title,
             summary: report.summary,
             findings: report.findings,
             impression: report.impression,
             recommendations: report.recommendations
-          }, {
-            params: { authorId: user.id }  // ← ADD authorId
-          })
+          }
+
+          // If patientId is provided but no studyId, use the patient-specific endpoint
+          if (patientIdFromQuery && !report.studyId) {
+            endpoint = `/reports/patient/${patientIdFromQuery}`
+            payload = {
+              title: report.title,
+              summary: report.summary,
+              findings: report.findings,
+              impression: report.impression,
+              recommendations: report.recommendations
+            }
+          }
+
+          const response = await http.post(endpoint, payload)
           report.id = response.data.id
           ElMessage.success('Report created')
           router.replace(`/reports/${report.id}/edit`)
@@ -313,10 +329,7 @@ export default {
           await saveDraft()
         }
 
-        const user = JSON.parse(localStorage.getItem('user') || '{}')
-        await http.post(`/reports/${report.id}/finalize`, null, {
-          params: { userId: user.id }
-        })
+        await http.post(`/reports/${report.id}/finalize`)
         report.finalized = true
         report.status = 'finalized'
         ElMessage.success('Report finalized')
@@ -395,6 +408,7 @@ RECOMMENDATIONS: Clinical correlation recommended. Follow-up as clinically indic
       aiSuggestion,
       studyInfo,
       report,
+      patientInfoFromQuery,
       isEditing,
       rules,
       saveDraft,

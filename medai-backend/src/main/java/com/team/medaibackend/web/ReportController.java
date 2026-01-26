@@ -12,6 +12,7 @@ import com.team.medaibackend.repository.PatientRepository;
 import com.team.medaibackend.repository.ReportRepository;
 import com.team.medaibackend.repository.StudyRepository;
 import com.team.medaibackend.repository.UserRepository;
+import com.team.medaibackend.security.SecurityUtils;
 import com.team.medaibackend.service.AuditService;
 import com.team.medaibackend.service.ReportService;
 import jakarta.validation.Valid;
@@ -33,31 +34,35 @@ public class ReportController {
     private final ReportService reportService;
     private final ReportRepository reportRepository;
     private final AuditService auditService;
-
     private final UserRepository userRepository;
     private final PatientRepository patientRepository;
     private final StudyRepository studyRepository;
+    private final SecurityUtils securityUtils;
 
-    public ReportController(ReportService reportService,
-                            ReportRepository reportRepository,
-                            AuditService auditService,
-                            UserRepository userRepository,
-                            PatientRepository patientRepository,
-                            StudyRepository studyRepository) {
+    public ReportController(
+            ReportService reportService,
+            ReportRepository reportRepository,
+            AuditService auditService,
+            UserRepository userRepository,
+            PatientRepository patientRepository,
+            StudyRepository studyRepository,
+            SecurityUtils securityUtils
+    ) {
         this.reportService = reportService;
         this.reportRepository = reportRepository;
         this.auditService = auditService;
         this.userRepository = userRepository;
         this.patientRepository = patientRepository;
         this.studyRepository = studyRepository;
+        this.securityUtils = securityUtils;
     }
 
     @PostMapping
     public ResponseEntity<ReportDto> createReport(
-            @Valid @RequestBody CreateReportRequest request,
-            @RequestParam(defaultValue = "1") Long authorId) {
+            @Valid @RequestBody CreateReportRequest request) {
 
-        ReportDto report = reportService.createReport(request, authorId);
+        User currentUser = securityUtils.getCurrentUserOrThrow();
+        ReportDto report = reportService.createReport(request, currentUser.getId());
         return ResponseEntity.ok(report);
     }
 
@@ -99,28 +104,26 @@ public class ReportController {
     @PutMapping("/{id}")
     public ResponseEntity<ReportDto> updateReport(
             @PathVariable Long id,
-            @RequestBody UpdateReportRequest request,
-            @RequestParam(defaultValue = "1") Long userId) {
+            @RequestBody UpdateReportRequest request) {
 
-        ReportDto report = reportService.updateReport(id, request, userId);
+        User currentUser = securityUtils.getCurrentUserOrThrow();
+        ReportDto report = reportService.updateReport(id, request, currentUser.getId());
         return ResponseEntity.ok(report);
     }
 
     @PostMapping("/{id}/finalize")
-    public ResponseEntity<ReportDto> finalizeReport(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "1") Long userId) {
+    public ResponseEntity<ReportDto> finalizeReport(@PathVariable Long id) {
 
-        ReportDto report = reportService.finalizeReport(id, userId);
+        User currentUser = securityUtils.getCurrentUserOrThrow();
+        ReportDto report = reportService.finalizeReport(id, currentUser.getId());
         return ResponseEntity.ok(report);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteReport(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "1") Long userId) {
+    public ResponseEntity<Map<String, Object>> deleteReport(@PathVariable Long id) {
 
-        reportService.deleteReport(id, userId);
+        User currentUser = securityUtils.getCurrentUserOrThrow();
+        reportService.deleteReport(id, currentUser.getId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -133,21 +136,39 @@ public class ReportController {
     @GetMapping("/patient")
     public ResponseEntity<List<Map<String, Object>>> getPatientReports(Authentication authentication) {
         String username = authentication.getName();
-        User user = userRepository.findByUsername(username).orElse(null);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user == null) {
-            return ResponseEntity.ok(Collections.emptyList());
-        }
+        System.out.println("DEBUG: Looking for patient records for user: " + username + " (ID: " + user.getId() + ", Email: " + user.getEmail() + ")");
 
-        // Find patient record linked to this user
+        // Try to find patient record linked to this user by email
         Patient patient = patientRepository.findByUser_Email(user.getEmail()).orElse(null);
 
+        // If not found by email, try to find all patients and match by user object
         if (patient == null) {
+            List<Patient> allPatients = patientRepository.findAll();
+            patient = allPatients.stream()
+                    .filter(p -> p.getUser() != null && p.getUser().getId().equals(user.getId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (patient != null) {
+                System.out.println("INFO: Found patient by user ID match: " + patient.getPatientId());
+            }
+        } else {
+            System.out.println("INFO: Found patient by email: " + patient.getPatientId());
+        }
+
+        // If still not found, return empty list (patient hasn't had any studies yet)
+        if (patient == null) {
+            System.out.println("WARN: No patient record found for user: " + username + " (email: " + user.getEmail() + ")");
             return ResponseEntity.ok(Collections.emptyList());
         }
 
         // Get all reports for this patient
         List<Report> reports = reportRepository.findByPatientId(patient.getId());
+
+        System.out.println("INFO: Found " + reports.size() + " reports for patient ID: " + patient.getId());
 
         List<Map<String, Object>> result = reports.stream().map(report -> {
             Map<String, Object> dto = new HashMap<>();
@@ -174,11 +195,9 @@ public class ReportController {
     @PostMapping("/patient/{patientId}")
     public ResponseEntity<?> createPatientReport(
             @PathVariable Long patientId,
-            @RequestBody Map<String, Object> request,
-            Authentication authentication) {
+            @RequestBody Map<String, Object> request) {
 
-        String username = authentication.getName();
-        User doctor = userRepository.findByUsername(username).orElse(null);
+        User doctor = securityUtils.getCurrentUserOrThrow();
 
         if (doctor == null) {
             return ResponseEntity.status(403).body(Map.of("message", "Authentication required"));
@@ -207,6 +226,7 @@ public class ReportController {
         report.setRecommendations((String) request.get("recommendations"));
         report.setStatus("draft");
         report.setFinalized(false);
+        report.setPatient(patient);
 
         report = reportRepository.save(report);
 

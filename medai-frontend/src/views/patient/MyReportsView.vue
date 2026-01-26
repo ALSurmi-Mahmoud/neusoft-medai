@@ -144,13 +144,13 @@ export default {
     const loadReports = async () => {
       loading.value = true
       try {
-        const response = await http.get('/patient/reports')  // ← CHANGED
+        const response = await http.get('/reports/patient')  // ← CHANGED
         reports.value = response.data.map(report => ({
           id: report.id,
-          reportDate: report.date,
+          reportDate: report.reportDate,  // ← Changed from report.date
           title: report.title || `Diagnostic Report #${report.id}`,
           doctorName: report.doctorName || 'Unknown',
-          reportType: report.modality || 'General',
+          reportType: report.reportType || 'General',  // ← Changed from report.modality
           status: report.status,
           findings: report.findings,
           impression: report.impression,

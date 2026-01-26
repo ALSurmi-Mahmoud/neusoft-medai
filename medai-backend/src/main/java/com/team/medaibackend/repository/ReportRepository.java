@@ -30,9 +30,8 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 
     @Query("""
         SELECT r FROM Report r
-        JOIN r.study s
-        JOIN s.patient p
-        WHERE p.id = :patientId
+        WHERE r.patient.id = :patientId
+           OR (r.study IS NOT NULL AND r.study.patient.id = :patientId)
         ORDER BY r.createdAt DESC
     """)
     List<Report> findByPatientId(@Param("patientId") Long patientId);

@@ -4,16 +4,19 @@ package com.team.medaibackend.service;
 import com.team.medaibackend.dto.CreateReportRequest;
 import com.team.medaibackend.dto.ReportDto;
 import com.team.medaibackend.dto.UpdateReportRequest;
+import com.team.medaibackend.entity.Patient;
 import com.team.medaibackend.entity.Report;
 import com.team.medaibackend.entity.Study;
 import com.team.medaibackend.entity.User;
 import com.team.medaibackend.repository.ReportRepository;
 import com.team.medaibackend.repository.StudyRepository;
 import com.team.medaibackend.repository.UserRepository;
+import com.team.medaibackend.security.SecurityUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,18 +29,21 @@ import java.util.stream.Collectors;
 public class ReportService {
 
     private final ReportRepository reportRepository;
-    private final StudyRepository studyRepository;
     private final UserRepository userRepository;
+    private final StudyRepository studyRepository;
     private final AuditService auditService;
+    private final SecurityUtils securityUtils;
 
     public ReportService(ReportRepository reportRepository,
-                         StudyRepository studyRepository,
                          UserRepository userRepository,
-                         AuditService auditService) {
+                         StudyRepository studyRepository,
+                         AuditService auditService,
+                         SecurityUtils securityUtils) {
         this.reportRepository = reportRepository;
-        this.studyRepository = studyRepository;
         this.userRepository = userRepository;
+        this.studyRepository = studyRepository;
         this.auditService = auditService;
+        this.securityUtils = securityUtils;
     }
 
     @Transactional
@@ -47,14 +53,22 @@ public class ReportService {
 
         // Handle null studyId - allow reports without studies
         Study study = null;
+        Patient patient = null;
+
         if (request.getStudyId() != null) {
             study = studyRepository.findById(request.getStudyId())
                     .orElseThrow(() -> new RuntimeException("Study not found: " + request.getStudyId()));
+
+            // If study exists, get the patient from it
+            if (study.getPatient() != null) {
+                patient = study.getPatient();
+            }
         }
 
         Report report = new Report();
         report.setReportUid(generateReportUid());
         report.setStudy(study);
+        report.setPatient(patient);  // ← ADD: Set patient from study
         report.setAuthor(author);
         report.setTitle(request.getTitle());
         report.setSummary(request.getSummary());
@@ -74,12 +88,15 @@ public class ReportService {
     }
 
     @Transactional
-    public ReportDto updateReport(Long reportId, UpdateReportRequest request, Long userId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found: " + reportId));
+    public ReportDto updateReport(Long id, UpdateReportRequest request, Long userId) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found with id: " + id));
+
+        // Verify user has permission to modify this report
+        verifyWriteAccess(report);
 
         if (report.getFinalized()) {
-            throw new RuntimeException("Cannot modify finalized report");
+            throw new RuntimeException("Cannot update finalized report");
         }
 
         User user = userRepository.findById(userId)
@@ -102,9 +119,12 @@ public class ReportService {
     }
 
     @Transactional
-    public ReportDto finalizeReport(Long reportId, Long userId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found: " + reportId));
+    public ReportDto finalizeReport(Long id, Long userId) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found with id: " + id));
+
+        // Verify user has permission to modify this report
+        verifyWriteAccess(report);
 
         if (report.getFinalized()) {
             throw new RuntimeException("Report is already finalized");
@@ -126,9 +146,12 @@ public class ReportService {
     }
 
     @Transactional
-    public void deleteReport(Long reportId, Long userId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found: " + reportId));
+    public void deleteReport(Long id, Long userId) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found with id: " + id));
+
+        // Verify user has permission to delete this report
+        verifyWriteAccess(report);
 
         if (report.getFinalized()) {
             throw new RuntimeException("Cannot delete finalized report");
@@ -145,9 +168,13 @@ public class ReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReportDto getReport(Long reportId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found: " + reportId));
+    public ReportDto getReport(Long id) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found with id: " + id));
+
+        // Verify user has permission to view this report
+        verifyReadAccess(report);
+
         return toDto(report);
     }
 
@@ -215,5 +242,75 @@ public class ReportService {
         dto.setCreatedAt(report.getCreatedAt());
         dto.setUpdatedAt(report.getUpdatedAt());
         return dto;
+    }
+    /**
+     * Check if the current user has permission to view a report.
+     * ADMIN and DOCTOR can view all reports.
+     * PATIENT can only view their own reports (linked via Study -> Patient).
+     *
+     * @param report The report to check access for
+     * @throws AccessDeniedException if user doesn't have permission
+     */
+    private void verifyReadAccess(Report report) {
+        User currentUser = securityUtils.getCurrentUserOrThrow();
+
+        // ADMIN can view all reports
+        if (securityUtils.isAdmin()) {
+            return;
+        }
+
+        // DOCTOR can view all reports
+        if (securityUtils.isDoctor()) {
+            return;
+        }
+
+        // RESEARCHER can view all reports
+        if (securityUtils.hasRole("RESEARCHER")) {
+            return;
+        }
+
+        // PATIENT can only view their own reports
+        if (securityUtils.hasRole("PATIENT")) {
+            if (report.getStudy() != null && report.getStudy().getPatient() != null) {
+                Patient reportPatient = report.getStudy().getPatient();
+
+                // Check 1: Patient linked to user via user_id
+                if (reportPatient.getUser() != null &&
+                        reportPatient.getUser().getId().equals(currentUser.getId())) {
+                    return;
+                }
+
+                // Check 2: Patient linked to user via email
+                if (reportPatient.getEmail() != null &&
+                        reportPatient.getEmail().equals(currentUser.getEmail())) {
+                    return;
+                }
+            }
+        }
+
+        throw new AccessDeniedException("You don't have permission to view this report");
+    }
+
+    /**
+     * Check if the current user has permission to modify a report.
+     * Only ADMIN and the report author (DOCTOR) can modify.
+     *
+     * @param report The report to check access for
+     * @throws AccessDeniedException if user doesn't have permission
+     */
+    private void verifyWriteAccess(Report report) {
+        User currentUser = securityUtils.getCurrentUserOrThrow();
+
+        // ADMIN can modify all reports
+        if (securityUtils.isAdmin()) {
+            return;
+        }
+
+        // Report author can modify their own report
+        if (report.getAuthor() != null && report.getAuthor().getId().equals(currentUser.getId())) {
+            return;
+        }
+
+        throw new AccessDeniedException("You don't have permission to modify this report");
     }
 }

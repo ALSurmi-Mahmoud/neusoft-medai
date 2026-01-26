@@ -16,6 +16,7 @@ import java.util.Optional;
 @Repository
 public interface StudyRepository extends JpaRepository<Study, Long> {
     Optional<Study> findByStudyUid(String studyUid);
+    Optional<Study> findTopByPatient_IdOrderByStudyDateDesc(Long patientId);
 
     Page<Study> findByModality(String modality, Pageable pageable);
     Page<Study> findByStatus(String status, Pageable pageable);
@@ -42,5 +43,6 @@ public interface StudyRepository extends JpaRepository<Study, Long> {
     @Query("SELECT COUNT(s) FROM Study s WHERE FUNCTION('DATE', s.createdAt) = :date")
     long countByCreatedAtDate(@Param("date") LocalDate date);
 
-    Optional<Study> findTopByPatient_IdOrderByStudyDateDesc(Long patientId);
+
+
 }
