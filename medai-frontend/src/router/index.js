@@ -98,6 +98,12 @@ const routes = [
                 component: () => import('../views/ReportEditorView.vue'),
                 meta: { title: 'Edit Report', roles: ['DOCTOR'] }
             },
+            {
+                path: 'my-patients',
+                name: 'MyPatients',
+                component: () => import('../views/doctor/MyPatientsView.vue'),
+                meta: { title: 'My Patients', roles: ['DOCTOR'] }
+            },
 
             // NURSE/TECHNICIAN routes
             {

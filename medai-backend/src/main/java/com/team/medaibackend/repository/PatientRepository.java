@@ -13,4 +13,6 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
 
     // ✅ NEW: query through relation Patient.user.email
     Optional<Patient> findByUser_Email(String email);
+
+
 }

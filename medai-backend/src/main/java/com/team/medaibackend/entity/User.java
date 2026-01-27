@@ -1,6 +1,7 @@
 package com.team.medaibackend.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -24,6 +25,10 @@ public class User {
 
     @Column(name = "full_name", length = 100)
     private String fullName;
+
+    // ✅ NEW: Birth date for all users
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     @Column(length = 20)
     private String phone;
@@ -89,6 +94,10 @@ public class User {
 
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
+
+    // ✅ NEW: Birth date getter/setter
+    public LocalDate getBirthDate() { return birthDate; }
+    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }

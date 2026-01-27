@@ -3,8 +3,10 @@ package com.team.medaibackend.service;
 import com.team.medaibackend.dto.LoginRequest;
 import com.team.medaibackend.dto.LoginResponse;
 import com.team.medaibackend.dto.RegisterRequest;
+import com.team.medaibackend.entity.Patient;
 import com.team.medaibackend.entity.Role;
 import com.team.medaibackend.entity.User;
+import com.team.medaibackend.repository.PatientRepository;
 import com.team.medaibackend.repository.RoleRepository;
 import com.team.medaibackend.repository.UserRepository;
 import com.team.medaibackend.security.JwtService;
@@ -23,17 +25,20 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PatientRepository patientRepository; // ✅ NEW
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditService auditService;
 
     public AuthService(UserRepository userRepository,
                        RoleRepository roleRepository,
+                       PatientRepository patientRepository, // ✅ NEW
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        AuditService auditService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.patientRepository = patientRepository; // ✅ NEW
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.auditService = auditService;
@@ -41,39 +46,8 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        System.out.println("=== LOGIN DEBUG START ===");
-        System.out.println("Request username: " + request.getUsername());
-        System.out.println("Request password length: " + (request.getPassword() != null ? request.getPassword().length() : "null"));
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> {
-                    System.out.println("ERROR: User not found in database");
-                    return new RuntimeException("Invalid username or password");
-                });
-
-        System.out.println("User found - ID: " + user.getId());
-        System.out.println("User password hash: " + (user.getPassword() != null ? user.getPassword().substring(0, Math.min(30, user.getPassword().length())) : "NULL"));
-        System.out.println("User password hash length: " + (user.getPassword() != null ? user.getPassword().length() : "null"));
-        System.out.println("User enabled: " + user.getEnabled());
-        System.out.println("User roles count: " + (user.getRoles() != null ? user.getRoles().size() : "null"));
-
-        String passwordHash = user.getPassword();
-        System.out.println("  - Password hash retrieved: " + (passwordHash != null));
-        if (passwordHash != null) {
-            System.out.println("  - Password hash length: " + passwordHash.length());
-            System.out.println("  - Password hash FULL: " + passwordHash);  // ← CHANGE THIS LINE
-            System.out.println("  - Expected hash: $2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG");
-            System.out.println("  - Hashes equal: " + passwordHash.equals("$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG"));
-        }
-
-        boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        System.out.println("Password matches: " + matches);
-        if (!matches) {
-            System.out.println("ERROR: Password does not match!");
-            System.out.println("=== LOGIN DEBUG END ===");
-            throw new RuntimeException("Invalid username or password");
-        }
-
-        System.out.println("=== LOGIN DEBUG END - SUCCESS ===");
+                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid username or password");
@@ -124,6 +98,12 @@ public class AuthService {
         user.setTitle(request.getTitle());
         user.setSpecialization(request.getSpecialization());
         user.setLicenseNumber(request.getLicenseNumber());
+
+        // ✅ NEW: Set birth date
+        if (request.getBirthDate() != null) {
+            user.setBirthDate(request.getBirthDate());
+        }
+
         user.setEnabled(true);
         user.setAccountLocked(false);
 
@@ -141,6 +121,31 @@ public class AuthService {
         user.setRoles(roles);
 
         User savedUser = userRepository.save(user);
+
+        // ✅ NEW: Auto-create Patient record if role is PATIENT
+        if ("PATIENT".equals(roleName)) {
+            Patient patient = new Patient();
+            patient.setPatientId("P-" + savedUser.getId());
+            patient.setName(savedUser.getFullName());
+            patient.setEmail(savedUser.getEmail());
+            patient.setUser(savedUser);
+
+            // Set birth date and gender from request
+            if (request.getBirthDate() != null) {
+                patient.setBirthDate(request.getBirthDate());
+            }
+            if (request.getGender() != null) {
+                patient.setSex(request.getGender());
+            }
+            if (request.getPhone() != null) {
+                patient.setPhone(request.getPhone());
+            }
+
+            patientRepository.save(patient);
+
+            auditService.log(AuditService.ACTION_CREATE, "PATIENT", patient.getId().toString(),
+                    savedUser.getId(), savedUser.getUsername());
+        }
 
         // Generate tokens
         String accessToken = jwtService.generateAccessToken(savedUser.getUsername(), savedUser.getPrimaryRole(), savedUser.getId());
@@ -174,7 +179,6 @@ public class AuthService {
         response.setTokenType("Bearer");
         response.setExpiresIn(86400L);
 
-        // NEW: Add roles array at root level with ROLE_ prefix
         List<String> roles = new ArrayList<>();
         String primaryRole = user.getPrimaryRole();
         roles.add("ROLE_" + primaryRole);

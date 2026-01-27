@@ -60,6 +60,11 @@
             <span>My Worklist</span>
           </el-menu-item>
 
+          <el-menu-item index="/my-patients">
+            <el-icon><User /></el-icon>
+            <span>My Patients</span>
+          </el-menu-item>
+
           <el-menu-item index="/studies">
             <el-icon><FolderOpened /></el-icon>
             <span>Studies</span>
@@ -93,13 +98,7 @@
 
 
 
-        <el-menu-item
-            v-else-if="userRole === 'PATIENT'"
-            index="/patient/appointments"
-        >
-          <el-icon><Calendar /></el-icon>
-          <span>My Appointments</span>
-        </el-menu-item>
+
 
         <!-- Studies - for medical staff -->
         <el-menu-item
@@ -201,6 +200,7 @@
     </el-container>
   </el-container>
 </template>
+
 
 <script>
 import { ref, computed } from 'vue'

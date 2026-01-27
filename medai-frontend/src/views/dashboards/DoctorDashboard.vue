@@ -116,6 +116,9 @@
             <span>Quick Actions</span>
           </template>
           <div class="quick-actions">
+            <el-button type="success" size="large" @click="$router.push('/my-patients')">
+              <el-icon><User /></el-icon> My Patients
+            </el-button>
             <el-button type="primary" size="large" @click="$router.push('/worklist')">
               <el-icon><Tickets /></el-icon> Open Worklist
             </el-button>
@@ -139,11 +142,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '../../utils/http'
-import { Tickets, Calendar, Document, CircleCheck, View, FolderOpened, Connection } from '@element-plus/icons-vue'
+import { Tickets, Calendar, Document, CircleCheck, View, FolderOpened, Connection ,User } from '@element-plus/icons-vue'
 
 export default {
   name: 'DoctorDashboard',
-  components: { Tickets, Calendar, Document, CircleCheck, View, FolderOpened, Connection },
+  components: { Tickets, Calendar, Document, CircleCheck, View, FolderOpened, Connection ,User },
   setup() {
     const router = useRouter()
 

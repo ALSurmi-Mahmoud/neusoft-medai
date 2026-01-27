@@ -67,8 +67,43 @@
           />
         </el-form-item>
 
+        <!-- ✅ NEW: Birth Date and Gender -->
         <el-row :gutter="20">
           <el-col :span="12">
+            <el-form-item label="Date of Birth" prop="birthDate">
+              <el-date-picker
+                  v-model="registerForm.birthDate"
+                  type="date"
+                  placeholder="Select date of birth"
+                  style="width: 100%;"
+                  :disabled-date="disabledDate"
+                  :prefix-icon="Calendar"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12" v-if="registerForm.role === 'PATIENT'">
+            <el-form-item label="Gender" prop="gender">
+              <el-select v-model="registerForm.gender" placeholder="Select gender" style="width: 100%;">
+                <el-option label="Male" value="M" />
+                <el-option label="Female" value="F" />
+                <el-option label="Other" value="O" />
+                <el-option label="Prefer not to say" value="U" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12" v-else>
+            <el-form-item label="Phone" prop="phone">
+              <el-input
+                  v-model="registerForm.phone"
+                  placeholder="Phone number"
+                  :prefix-icon="Phone"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="12" v-if="registerForm.role === 'PATIENT'">
             <el-form-item label="Phone" prop="phone">
               <el-input
                   v-model="registerForm.phone"
@@ -167,7 +202,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Message, UserFilled, Phone } from '@element-plus/icons-vue'
+import { User, Lock, Message, UserFilled, Phone, Calendar } from '@element-plus/icons-vue'
 import http from '../utils/http'
 
 export default {
@@ -186,6 +221,8 @@ export default {
       password: '',
       confirmPassword: '',
       fullName: '',
+      birthDate: null, // ✅ NEW
+      gender: '', // ✅ NEW
       phone: '',
       role: 'PATIENT',
       department: '',
@@ -222,9 +259,28 @@ export default {
       fullName: [
         { required: true, message: 'Full name is required', trigger: 'blur' }
       ],
+      birthDate: [
+        { required: true, message: 'Date of birth is required', trigger: 'change' }
+      ],
+      gender: [
+        // ✅ Only required for PATIENT role
+        {
+          required: false,  // Changed from true
+          message: 'Gender is required',
+          trigger: 'change'
+        }
+      ],
       role: [
         { required: true, message: 'Please select a role', trigger: 'change' }
       ]
+    }
+
+    const disabledDate = (date) => {
+      // Disable future dates and dates more than 120 years ago
+      const today = new Date()
+      const minDate = new Date()
+      minDate.setFullYear(today.getFullYear() - 120)
+      return date > today || date < minDate
     }
 
     const loadRoles = async () => {
@@ -232,7 +288,6 @@ export default {
         const response = await http.get('/auth/roles')
         availableRoles.value = response.data.roles || []
       } catch (error) {
-        // Default roles if API fails
         availableRoles.value = [
           { value: 'PATIENT', label: 'Patient', description: 'View own reports' },
           { value: 'DOCTOR', label: 'Doctor', description: 'Full clinical access' },
@@ -249,11 +304,18 @@ export default {
           loading.value = true
 
           try {
+            // Format birth date to YYYY-MM-DD
+            const birthDateStr = registerForm.birthDate
+                ? new Date(registerForm.birthDate).toISOString().split('T')[0]
+                : null
+
             const response = await http.post('/auth/register', {
               username: registerForm.username,
               email: registerForm.email,
               password: registerForm.password,
               fullName: registerForm.fullName,
+              birthDate: birthDateStr, // ✅ NEW
+              gender: registerForm.gender || null, // ✅ NEW
               phone: registerForm.phone,
               role: registerForm.role,
               department: registerForm.department,
@@ -262,13 +324,11 @@ export default {
               licenseNumber: registerForm.licenseNumber
             })
 
-            // Store tokens
             const data = response.data
             localStorage.setItem('accessToken', data.accessToken)
             localStorage.setItem('refreshToken', data.refreshToken)
             localStorage.setItem('user', JSON.stringify(data.user))
 
-            // Update auth store
             authStore.$patch({
               accessToken: data.accessToken,
               refreshToken: data.refreshToken,
@@ -297,11 +357,13 @@ export default {
       loading,
       availableRoles,
       handleRegister,
+      disabledDate,
       User,
       Lock,
       Message,
       UserFilled,
-      Phone
+      Phone,
+      Calendar
     }
   }
 }
@@ -319,7 +381,7 @@ export default {
 
 .register-box {
   width: 100%;
-  max-width: 600px;
+  max-width: 700px;
   padding: 40px;
   background: white;
   border-radius: 10px;

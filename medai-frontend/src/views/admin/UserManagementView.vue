@@ -97,36 +97,132 @@
       />
     </el-card>
 
-    <!-- Add/Edit User Dialog -->
-    <el-dialog v-model="userDialogVisible" :title="isEditing ? 'Edit User' : 'Add New User'" width="600px">
-      <el-form ref="userFormRef" :model="userForm" :rules="userRules" label-width="120px">
-        <el-form-item label="Username" prop="username">
-          <el-input v-model="userForm.username" :disabled="isEditing" />
-        </el-form-item>
-        <el-form-item label="Email" prop="email">
-          <el-input v-model="userForm.email" />
-        </el-form-item>
+    <!-- ✅ IDENTICAL TO REGISTRATION FORM -->
+    <el-dialog v-model="userDialogVisible" :title="isEditing ? 'Edit User' : 'Add New User'" width="700px">
+      <el-form ref="userFormRef" :model="userForm" :rules="userRules" label-width="160px">
+        <!-- ✅ SAME AS REGISTRATION: Username + Email -->
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="Username" prop="username">
+              <el-input v-model="userForm.username" :disabled="isEditing" placeholder="Choose a username" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Email" prop="email">
+              <el-input v-model="userForm.email" placeholder="Enter email" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- ✅ SAME AS REGISTRATION: Password (only when creating) -->
+        <el-row :gutter="20" v-if="!isEditing">
+          <el-col :span="12">
+            <el-form-item label="Password" prop="password">
+              <el-input v-model="userForm.password" type="password" placeholder="Create password" show-password />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Confirm Password" prop="confirmPassword">
+              <el-input v-model="userForm.confirmPassword" type="password" placeholder="Confirm password" show-password />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- ✅ SAME AS REGISTRATION: Full Name -->
         <el-form-item label="Full Name" prop="fullName">
-          <el-input v-model="userForm.fullName" />
+          <el-input v-model="userForm.fullName" placeholder="Enter full name" />
         </el-form-item>
-        <el-form-item label="Phone">
-          <el-input v-model="userForm.phone" />
-        </el-form-item>
-        <el-form-item label="Role" prop="role">
-          <el-select v-model="userForm.role" style="width: 100%;">
-            <el-option label="Admin" value="ADMIN" />
-            <el-option label="Doctor" value="DOCTOR" />
-            <el-option label="Nurse" value="NURSE" />
-            <el-option label="Patient" value="PATIENT" />
-            <el-option label="Researcher" value="RESEARCHER" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Department">
-          <el-input v-model="userForm.department" />
-        </el-form-item>
-        <el-form-item label="Password" prop="password" v-if="!isEditing">
-          <el-input v-model="userForm.password" type="password" show-password />
-        </el-form-item>
+
+        <!-- ✅ SAME AS REGISTRATION: Birth Date + Gender (ALWAYS VISIBLE FOR ALL ROLES) -->
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="Date of Birth" prop="birthDate">
+              <el-date-picker
+                  v-model="userForm.birthDate"
+                  type="date"
+                  placeholder="Select date of birth"
+                  style="width: 100%;"
+                  :disabled-date="disabledDate"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Gender" prop="gender">
+              <el-select v-model="userForm.gender" placeholder="Select gender" style="width: 100%;">
+                <el-option label="Male" value="M" />
+                <el-option label="Female" value="F" />
+                <el-option label="Other" value="O" />
+                <el-option label="Prefer not to say" value="U" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- ✅ SAME AS REGISTRATION: Phone + Role -->
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="Phone">
+              <el-input v-model="userForm.phone" placeholder="Phone number" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Role" prop="role">
+              <el-select v-model="userForm.role" placeholder="Select role" style="width: 100%;">
+                <el-option label="Admin" value="ADMIN" />
+                <el-option label="Doctor" value="DOCTOR" />
+                <el-option label="Nurse" value="NURSE" />
+                <el-option label="Patient" value="PATIENT" />
+                <el-option label="Researcher" value="RESEARCHER" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- ✅ SAME AS REGISTRATION: Professional fields for DOCTOR -->
+        <template v-if="userForm.role === 'DOCTOR'">
+          <el-divider>Professional Information</el-divider>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Department">
+                <el-input v-model="userForm.department" placeholder="e.g., Radiology" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Specialization">
+                <el-input v-model="userForm.specialization" placeholder="e.g., Cardiology" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Title">
+                <el-input v-model="userForm.title" placeholder="e.g., Radiologist" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="License Number">
+                <el-input v-model="userForm.licenseNumber" placeholder="Medical license #" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </template>
+
+        <!-- ✅ SAME AS REGISTRATION: Professional fields for NURSE -->
+        <template v-if="userForm.role === 'NURSE'">
+          <el-divider>Professional Information</el-divider>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Department">
+                <el-input v-model="userForm.department" placeholder="e.g., Imaging Center" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="License Number">
+                <el-input v-model="userForm.licenseNumber" placeholder="Nursing license #" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="userDialogVisible = false">Cancel</el-button>
@@ -192,11 +288,17 @@ export default {
     const userForm = reactive({
       username: '',
       email: '',
+      password: '',
+      confirmPassword: '',
       fullName: '',
+      birthDate: null,
+      gender: '',
       phone: '',
       role: 'PATIENT',
       department: '',
-      password: ''
+      title: '',
+      specialization: '',
+      licenseNumber: ''
     })
 
     const passwordForm = reactive({
@@ -204,18 +306,46 @@ export default {
       confirmPassword: ''
     })
 
-    const userRules = {
-      username: [{ required: true, message: 'Username is required', trigger: 'blur' }],
-      email: [
-        { required: true, message: 'Email is required', trigger: 'blur' },
-        { type: 'email', message: 'Invalid email', trigger: 'blur' }
-      ],
-      fullName: [{ required: true, message: 'Full name is required', trigger: 'blur' }],
-      role: [{ required: true, message: 'Role is required', trigger: 'change' }],
-      password: [{ required: true, message: 'Password is required', trigger: 'blur', min: 6 }]
+    const validateConfirmPassword = (rule, value, callback) => {
+      if (value !== userForm.password) {
+        callback(new Error('Passwords do not match'))
+      } else {
+        callback()
+      }
     }
 
-    const validateConfirmPassword = (rule, value, callback) => {
+    const userRules = {
+      username: [
+        { required: true, message: 'Username is required', trigger: 'blur' },
+        { min: 3, max: 50, message: 'Username must be 3-50 characters', trigger: 'blur' }
+      ],
+      email: [
+        { required: true, message: 'Email is required', trigger: 'blur' },
+        { type: 'email', message: 'Invalid email format', trigger: 'blur' }
+      ],
+      password: [
+        { required: true, message: 'Password is required', trigger: 'blur' },
+        { min: 6, message: 'Password must be at least 6 characters', trigger: 'blur' }
+      ],
+      confirmPassword: [
+        { required: true, message: 'Please confirm password', trigger: 'blur' },
+        { validator: validateConfirmPassword, trigger: 'blur' }
+      ],
+      fullName: [
+        { required: true, message: 'Full name is required', trigger: 'blur' }
+      ],
+      birthDate: [
+        { required: true, message: 'Date of birth is required', trigger: 'change' }
+      ],
+      gender: [
+        { required: true, message: 'Gender is required', trigger: 'change' }
+      ],
+      role: [
+        { required: true, message: 'Role is required', trigger: 'change' }
+      ]
+    }
+
+    const validatePasswordConfirm = (rule, value, callback) => {
       if (value !== passwordForm.newPassword) {
         callback(new Error('Passwords do not match'))
       } else {
@@ -230,8 +360,15 @@ export default {
       ],
       confirmPassword: [
         { required: true, message: 'Please confirm password', trigger: 'blur' },
-        { validator: validateConfirmPassword, trigger: 'blur' }
+        { validator: validatePasswordConfirm, trigger: 'blur' }
       ]
+    }
+
+    const disabledDate = (date) => {
+      const today = new Date()
+      const minDate = new Date()
+      minDate.setFullYear(today.getFullYear() - 120)
+      return date > today || date < minDate
     }
 
     const loadUsers = async () => {
@@ -270,11 +407,17 @@ export default {
       Object.assign(userForm, {
         username: '',
         email: '',
+        password: '',
+        confirmPassword: '',
         fullName: '',
+        birthDate: null,
+        gender: '',
         phone: '',
         role: 'PATIENT',
         department: '',
-        password: ''
+        title: '',
+        specialization: '',
+        licenseNumber: ''
       })
       userDialogVisible.value = true
     }
@@ -286,9 +429,14 @@ export default {
         username: user.username,
         email: user.email,
         fullName: user.fullName,
+        birthDate: user.birthDate ? new Date(user.birthDate) : null,
+        gender: user.gender || '',
         phone: user.phone,
         role: user.role,
-        department: user.department
+        department: user.department,
+        title: user.title,
+        specialization: user.specialization,
+        licenseNumber: user.licenseNumber
       })
       userDialogVisible.value = true
     }
@@ -300,11 +448,33 @@ export default {
         if (valid) {
           saving.value = true
           try {
+            const birthDateStr = userForm.birthDate
+                ? new Date(userForm.birthDate).toISOString().split('T')[0]
+                : null
+
+            const payload = {
+              username: userForm.username,
+              email: userForm.email,
+              fullName: userForm.fullName,
+              birthDate: birthDateStr,
+              gender: userForm.gender || null,
+              phone: userForm.phone,
+              role: userForm.role,
+              department: userForm.department,
+              title: userForm.title,
+              specialization: userForm.specialization,
+              licenseNumber: userForm.licenseNumber
+            }
+
+            if (!isEditing.value) {
+              payload.password = userForm.password
+            }
+
             if (isEditing.value) {
-              await http.put(`/admin/users/${selectedUserId.value}`, userForm)
+              await http.put(`/admin/users/${selectedUserId.value}`, payload)
               ElMessage.success('User updated successfully')
             } else {
-              await http.post('/admin/users', userForm)
+              await http.post('/admin/users', payload)
               ElMessage.success('User created successfully')
             }
             userDialogVisible.value = false
@@ -426,7 +596,8 @@ export default {
       confirmResetPassword,
       deleteUser,
       formatDate,
-      getRoleType
+      getRoleType,
+      disabledDate
     }
   }
 }
