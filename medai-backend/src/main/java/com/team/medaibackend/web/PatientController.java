@@ -412,6 +412,191 @@ public class PatientController {
 
         return ResponseEntity.ok(detail);
     }
+// ============================================================================
+// ENHANCED PATIENT DETAIL ENDPOINT FOR PHASE 4.2
+// Add this method to PatientController.java at line 415 (after the existing patients/{id} endpoint)
+// ============================================================================
+
+    /**
+     * Get comprehensive patient detail with ALL appointments, reports, and studies
+     * This is the ENHANCED version for Phase 4.2 Patient 360° Profile View
+     */
+    @GetMapping("/doctor/patients/{id}/complete")
+    public ResponseEntity<?> getCompletePatientDetail(@PathVariable Long id) {
+        User doctor = securityUtils.getCurrentUserOrThrow();
+
+        // Verify doctor role
+        if (!"DOCTOR".equals(doctor.getPrimaryRole()) && !securityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(Map.of("message", "Access denied"));
+        }
+
+        Patient patient = patientRepository.findById(id).orElse(null);
+        if (patient == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Verify this patient has appointments with this doctor
+        boolean isMyPatient = appointmentRepository
+                .findByDoctorIdOrderByAppointmentDateAscAppointmentTimeAsc(doctor.getId())
+                .stream()
+                .anyMatch(apt -> apt.getPatient().getId().equals(id));
+
+        if (!isMyPatient && !securityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(Map.of("message", "Access denied"));
+        }
+
+        // Build comprehensive patient data
+        Map<String, Object> detail = new HashMap<>();
+
+        // ===== PATIENT DEMOGRAPHICS =====
+        detail.put("id", patient.getId());
+        detail.put("patientId", patient.getPatientId());
+        detail.put("name", patient.getName());
+        detail.put("email", patient.getEmail());
+        detail.put("phone", patient.getPhone());
+        detail.put("birthDate", patient.getBirthDate());
+        detail.put("sex", patient.getSex());
+        detail.put("bloodType", patient.getBloodType());
+
+        // Address
+        detail.put("address", patient.getAddress());
+        detail.put("city", patient.getCity());
+        detail.put("state", patient.getState());
+        detail.put("zipCode", patient.getZipCode());
+
+        // Emergency Contact
+        detail.put("emergencyContactName", patient.getEmergencyContactName());
+        detail.put("emergencyContactPhone", patient.getEmergencyContactPhone());
+        detail.put("emergencyContactRelationship", patient.getEmergencyContactRelationship());
+
+        // Medical Information
+        detail.put("allergies", patient.getAllergies());
+        detail.put("medicalConditions", patient.getMedicalConditions());
+        detail.put("currentMedications", patient.getCurrentMedications());
+
+        // Calculate age
+        if (patient.getBirthDate() != null) {
+            int age = Period.between(patient.getBirthDate(), LocalDate.now()).getYears();
+            detail.put("age", age);
+        } else {
+            detail.put("age", null);
+        }
+
+        // ===== GET ALL RELATED DATA =====
+        List<Appointment> allAppointments = appointmentRepository
+                .findByPatientIdOrderByAppointmentDateDescAppointmentTimeDesc(patient.getId());
+
+        List<Report> allReports = reportRepository.findByPatientId(patient.getId());
+        List<Study> allStudies = studyRepository.findByPatientId(patient.getId());
+
+        // ===== STATISTICS =====
+        LocalDate lastVisit = allAppointments.stream()
+                .filter(apt -> "completed".equals(apt.getStatus()))
+                .map(Appointment::getAppointmentDate)
+                .max(LocalDate::compareTo)
+                .orElse(null);
+        detail.put("lastVisit", lastVisit);
+
+        // Status
+        LocalDate threeMonthsAgo = LocalDate.now().minusMonths(3);
+        boolean isActive = lastVisit != null && lastVisit.isAfter(threeMonthsAgo);
+        detail.put("status", isActive ? "active" : "inactive");
+
+        detail.put("appointmentCount", allAppointments.size());
+        detail.put("reportCount", allReports.size());
+        detail.put("studyCount", allStudies.size());
+
+        // ===== ALL APPOINTMENTS (for Appointments Tab) =====
+        List<Map<String, Object>> appointmentsList = allAppointments.stream()
+                .map(apt -> {
+                    Map<String, Object> aptData = new HashMap<>();
+                    aptData.put("id", apt.getId());
+                    aptData.put("appointmentDate", apt.getAppointmentDate());
+                    aptData.put("appointmentTime", apt.getAppointmentTime());
+                    aptData.put("appointmentType", apt.getAppointmentType());
+                    aptData.put("status", apt.getStatus());
+                    aptData.put("location", apt.getLocation());
+                    aptData.put("notes", apt.getNotes());
+                    aptData.put("reason", apt.getReason());
+                    aptData.put("durationMinutes", apt.getDurationMinutes());
+
+                    // Doctor info
+                    if (apt.getDoctor() != null) {
+                        aptData.put("doctorName", apt.getDoctor().getFullName());
+                        aptData.put("doctorId", apt.getDoctor().getId());
+                    }
+
+                    return aptData;
+                })
+                .collect(Collectors.toList());
+        detail.put("recentAppointments", appointmentsList);
+
+        // ===== ALL REPORTS (for Reports Tab) =====
+        List<Map<String, Object>> reportsList = allReports.stream()
+                .map(report -> {
+                    Map<String, Object> reportData = new HashMap<>();
+                    reportData.put("id", report.getId());
+                    reportData.put("reportUid", report.getReportUid());
+                    reportData.put("title", report.getTitle());
+                    reportData.put("summary", report.getSummary());
+                    reportData.put("findings", report.getFindings());
+                    reportData.put("impression", report.getImpression());
+                    reportData.put("recommendations", report.getRecommendations());
+                    reportData.put("status", report.getStatus());
+                    reportData.put("finalized", report.getFinalized());
+                    reportData.put("createdAt", report.getCreatedAt());
+                    reportData.put("finalizedAt", report.getFinalizedAt());
+
+                    // Author info
+                    if (report.getAuthor() != null) {
+                        reportData.put("authorName", report.getAuthor().getFullName());
+                        reportData.put("authorId", report.getAuthor().getId());
+                    }
+
+                    // Study info
+                    if (report.getStudy() != null) {
+                        reportData.put("studyId", report.getStudy().getId());
+                        reportData.put("modality", report.getStudy().getModality());
+                    }
+
+                    return reportData;
+                })
+                .collect(Collectors.toList());
+        detail.put("recentReports", reportsList);
+
+        // ===== ALL STUDIES (for Studies Tab) =====
+        List<Map<String, Object>> studiesList = allStudies.stream()
+                .map(study -> {
+                    Map<String, Object> studyData = new HashMap<>();
+                    studyData.put("id", study.getId());
+                    studyData.put("studyUid", study.getStudyUid());
+                    studyData.put("studyDate", study.getStudyDate());
+                    studyData.put("description", study.getDescription());
+                    studyData.put("modality", study.getModality());
+                    studyData.put("accessionNumber", study.getAccessionNumber());
+                    studyData.put("status", study.getStatus());
+
+                    // Count series
+                    if (study.getSeriesList() != null) {
+                        studyData.put("seriesCount", study.getSeriesList().size());
+                    }
+
+                    return studyData;
+                })
+                .collect(Collectors.toList());
+        detail.put("recentStudies", studiesList);
+
+        // Log audit
+        auditService.log(
+                "GET_PATIENT_COMPLETE_DETAIL",
+                "PATIENT",
+                id.toString(),
+                doctor.getId(),
+                doctor.getUsername()
+        );
+
+        return ResponseEntity.ok(detail);
+    }
 
     /**
      * Create a new patient (called by doctors)
