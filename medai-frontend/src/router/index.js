@@ -175,6 +175,12 @@ const routes = [
                 name: 'MyReports',
                 component: () => import('../views/patient/MyReportsView.vue'),
                 meta: { title: 'My Reports', roles: ['PATIENT'] }
+            },
+            {
+                path: 'my-prescriptions',
+                name: 'MyPrescriptions',
+                component: () => import('../views/patient/PrescriptionListView.vue'),
+                meta: { title: 'My Prescriptions', roles: ['PATIENT'] }
             }
         ]
     },

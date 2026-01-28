@@ -148,6 +148,11 @@
             <el-icon><Document /></el-icon>
             <span>My Reports</span>
           </el-menu-item>
+
+          <el-menu-item index="/my-prescriptions">
+            <el-icon><FirstAidKit /></el-icon>
+            <span>My Prescriptions</span>
+          </el-menu-item>
         </template>
       </el-menu>
 
@@ -206,6 +211,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { FirstAidKit } from '@element-plus/icons-vue'
 import {
   Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
   Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold
@@ -215,7 +221,7 @@ export default {
   name: 'MainLayout',
   components: {
     Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
-    Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold
+    Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold, FirstAidKit
   },
   setup() {
     const route = useRoute()

@@ -215,6 +215,17 @@
                 <el-empty description="No studies found" />
               </div>
             </el-tab-pane>
+            <!-- Prescriptions Tab -->
+            <el-tab-pane name="prescriptions">
+              <template #label>
+                <span>Prescriptions <el-badge :value="prescriptions.length" class="tab-badge" /></span>
+              </template>
+              <PrescriptionsTab
+                  v-if="patient.id"
+                  :patient-id="patient.id"
+                  @prescription-added="loadPatientDetail"
+              />
+            </el-tab-pane>
 
             <!-- Timeline Tab -->
             <el-tab-pane label="Timeline" name="timeline">
@@ -302,6 +313,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import http from '../../utils/http'
 import { ElMessage } from 'element-plus'
+import PrescriptionsTab from './PrescriptionsTab.vue'
 import {
   Calendar, FolderOpened, Document, View, ChatDotRound, Edit
 } from '@element-plus/icons-vue'
@@ -309,13 +321,15 @@ import {
 export default {
   name: 'PatientDetailView',
   components: {
-    Calendar, FolderOpened, Document, View, ChatDotRound, Edit
+    Calendar, FolderOpened, Document, View, ChatDotRound, Edit, PrescriptionsTab
   },
   setup() {
     const route = useRoute()
     const router = useRouter()
     const loading = ref(false)
     const activeTab = ref('overview')
+    const prescriptions = ref([]); // ✅ Declare prescriptions here
+
 
     const patient = reactive({
       id: null,
@@ -401,6 +415,7 @@ export default {
         const patientId = route.params.id
         // Use the ENHANCED complete endpoint for Phase 4.2
         const response = await http.get(`/patient/doctor/patients/${patientId}/complete`)
+        const prescriptions = ref([])
 
         // Assign all patient data
         Object.assign(patient, response.data)
@@ -409,6 +424,13 @@ export default {
         appointments.value = response.data.recentAppointments || []
         reports.value = response.data.recentReports || []
         studies.value = response.data.recentStudies || []
+
+
+        if (response.data.prescriptions) {
+          prescriptions.value = response.data.prescriptions;
+        }
+
+
       } catch (error) {
         console.error('Failed to load patient:', error)
         ElMessage.error('Failed to load patient details')
@@ -521,6 +543,7 @@ export default {
       router.push(`/studies/${study.id}`)
     }
 
+
     onMounted(() => {
       loadPatientDetail()
     })
@@ -548,7 +571,8 @@ export default {
       sendMessage,
       editPatient,
       viewReport,
-      viewStudy
+      viewStudy,
+      prescriptions
     }
   }
 }
