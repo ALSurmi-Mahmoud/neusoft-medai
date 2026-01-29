@@ -258,6 +258,10 @@
                 </div>
               </div>
             </el-tab-pane>
+            <!--Clinical Notes tab-->
+            <el-tab-pane label="Clinical Notes" name="clinical-notes">
+              <ClinicalNotesTab :patient-id="patient.id" />
+            </el-tab-pane>
           </el-tabs>
         </el-card>
       </el-col>
@@ -314,14 +318,16 @@ import { useRoute, useRouter } from 'vue-router'
 import http from '../../utils/http'
 import { ElMessage } from 'element-plus'
 import PrescriptionsTab from './PrescriptionsTab.vue'
+import ClinicalNotesTab from '../clinical-notes/ClinicalNotesTab.vue'
 import {
   Calendar, FolderOpened, Document, View, ChatDotRound, Edit
-} from '@element-plus/icons-vue'
+}
+from '@element-plus/icons-vue'
 
 export default {
   name: 'PatientDetailView',
   components: {
-    Calendar, FolderOpened, Document, View, ChatDotRound, Edit, PrescriptionsTab
+    Calendar, FolderOpened, Document, View, ChatDotRound, Edit, PrescriptionsTab, ClinicalNotesTab
   },
   setup() {
     const route = useRoute()

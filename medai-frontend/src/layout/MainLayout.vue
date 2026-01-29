@@ -42,6 +42,11 @@
             </el-menu-item>
           </el-sub-menu>
 
+          <el-menu-item index="/clinical-notes">
+            <el-icon><Document /></el-icon>
+            <span>Clinical Notes</span>
+          </el-menu-item>
+
           <el-menu-item index="/pacs">
             <el-icon><Connection /></el-icon>
             <span>PACS Management</span>
@@ -68,6 +73,11 @@
           <el-menu-item index="/studies">
             <el-icon><FolderOpened /></el-icon>
             <span>Studies</span>
+          </el-menu-item>
+
+          <el-menu-item index="/clinical-notes">
+            <el-icon><Document /></el-icon>
+            <span>Clinical Notes</span>
           </el-menu-item>
 
           <el-menu-item index="/reports">

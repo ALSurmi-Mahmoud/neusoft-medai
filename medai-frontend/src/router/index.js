@@ -1,5 +1,7 @@
 // src/router/index.js (or src/router/index.ts)
 import { createRouter, createWebHistory } from 'vue-router'
+import ClinicalNoteEditor from '../views/clinical-notes/ClinicalNoteEditor.vue'
+import ClinicalNoteList from '../views/clinical-notes/ClinicalNoteList.vue'
 
 const routes = [
     {
@@ -181,6 +183,26 @@ const routes = [
                 name: 'MyPrescriptions',
                 component: () => import('../views/patient/PrescriptionListView.vue'),
                 meta: { title: 'My Prescriptions', roles: ['PATIENT'] }
+            },
+        //     notes
+            {
+                path: '/clinical-notes',
+                name: 'ClinicalNotes',
+                component: ClinicalNoteList,
+                meta: { title: 'Clinical Notes', requiresAuth: true, roles: ['DOCTOR', 'ADMIN'] }
+            },
+            {
+                path: '/clinical-notes/new',
+                name: 'NewClinicalNote',
+                component: ClinicalNoteEditor,
+                meta: { title: 'New Clinical Note', requiresAuth: true, roles: ['DOCTOR'] }
+            },
+            {
+                path: '/clinical-notes/:id/edit',
+                name: 'EditClinicalNote',
+                component: ClinicalNoteEditor,
+                props: route => ({ noteId: parseInt(route.params.id) }),
+                meta: { title: 'Edit Clinical Note', requiresAuth: true, roles: ['DOCTOR'] }
             }
         ]
     },
