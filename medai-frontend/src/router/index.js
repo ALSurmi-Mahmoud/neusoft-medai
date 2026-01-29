@@ -2,6 +2,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ClinicalNoteEditor from '../views/clinical-notes/ClinicalNoteEditor.vue'
 import ClinicalNoteList from '../views/clinical-notes/ClinicalNoteList.vue'
+import TreatmentPlanEditor from '../views/treatment-plans/TreatmentPlanEditor.vue'
+import TreatmentPlanList from '../views/treatment-plans/TreatmentPlanList.vue'
 
 const routes = [
     {
@@ -203,6 +205,40 @@ const routes = [
                 component: ClinicalNoteEditor,
                 props: route => ({ noteId: parseInt(route.params.id) }),
                 meta: { title: 'Edit Clinical Note', requiresAuth: true, roles: ['DOCTOR'] }
+            },
+        //     treatment
+            {
+                path: '/treatment-plans',
+                name: 'TreatmentPlans',
+                component: TreatmentPlanList,
+                meta: {
+                    title: 'Treatment Plans',
+                    requiresAuth: true,
+                    roles: ['DOCTOR', 'ADMIN']
+                }
+            },
+            {
+                path: '/treatment-plans/new',
+                name: 'NewTreatmentPlan',
+                component: TreatmentPlanEditor,
+                meta: {
+                    title: 'New Treatment Plan',
+                    requiresAuth: true,
+                    roles: ['DOCTOR']
+                }
+            },
+            {
+                path: '/treatment-plans/:id/edit',
+                name: 'EditTreatmentPlan',
+                component: TreatmentPlanEditor,
+                props: route => ({
+                    planId: parseInt(route.params.id)
+                }),
+                meta: {
+                    title: 'Edit Treatment Plan',
+                    requiresAuth: true,
+                    roles: ['DOCTOR']
+                }
             }
         ]
     },

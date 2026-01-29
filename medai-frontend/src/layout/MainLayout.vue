@@ -47,6 +47,11 @@
             <span>Clinical Notes</span>
           </el-menu-item>
 
+          <el-menu-item index="/treatment-plans">
+            <el-icon><TrendCharts /></el-icon>
+            <span>Treatment Plans</span>
+          </el-menu-item>
+
           <el-menu-item index="/pacs">
             <el-icon><Connection /></el-icon>
             <span>PACS Management</span>
@@ -80,6 +85,11 @@
             <span>Clinical Notes</span>
           </el-menu-item>
 
+          <el-menu-item index="/treatment-plans">
+            <el-icon><TrendCharts /></el-icon>
+            <span>Treatment Plans</span>
+          </el-menu-item>
+
           <el-menu-item index="/reports">
             <el-icon><Document /></el-icon>
             <span>Reports</span>
@@ -89,6 +99,8 @@
             <el-icon><Calendar /></el-icon>
             <span>Appointments</span>
           </el-menu-item>
+
+
 
           <el-menu-item index="/pacs">
             <el-icon><Connection /></el-icon>
@@ -105,9 +117,6 @@
           <el-icon><Calendar /></el-icon>
           <span>Schedule</span>
         </el-menu-item>
-
-
-
 
 
         <!-- Studies - for medical staff -->
@@ -222,6 +231,7 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { FirstAidKit } from '@element-plus/icons-vue'
+import { TrendCharts } from '@element-plus/icons-vue'
 import {
   Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
   Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold
@@ -231,7 +241,7 @@ export default {
   name: 'MainLayout',
   components: {
     Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
-    Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold, FirstAidKit
+    Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold, FirstAidKit, TrendCharts
   },
   setup() {
     const route = useRoute()

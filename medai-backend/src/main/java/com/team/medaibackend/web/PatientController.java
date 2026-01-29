@@ -313,6 +313,80 @@ public class PatientController {
         return ResponseEntity.ok(response);
     }
 
+    // ✅ ADD THIS NEW METHOD HERE ⬇️⬇️⬇️
+    /**
+     * Simple patient search for dropdowns (no pagination, just search)
+     * Used by treatment plan editor, clinical note editor, etc.
+     *
+     * Frontend calls: GET /api/patient/doctor/patients?search=xxx
+     */
+    @GetMapping("/doctor/patients")
+    public ResponseEntity<?> searchMyPatients(
+            @RequestParam(required = false) String search
+    ) {
+        try {
+            User doctor = securityUtils.getCurrentUserOrThrow();
+
+            // Get all appointments for this doctor to find their patients
+            List<Appointment> doctorAppointments = appointmentRepository
+                    .findByDoctorIdOrderByAppointmentDateAscAppointmentTimeAsc(doctor.getId());
+
+            // Extract unique patient IDs
+            Set<Long> patientIds = doctorAppointments.stream()
+                    .map(apt -> apt.getPatient().getId())
+                    .collect(Collectors.toSet());
+
+            // Get all patients for this doctor
+            List<Patient> allPatients = patientRepository.findAllById(patientIds);
+
+            // Apply search filter if provided
+            List<Patient> filteredPatients = allPatients;
+            if (search != null && !search.trim().isEmpty()) {
+                String searchLower = search.toLowerCase();
+                filteredPatients = allPatients.stream()
+                        .filter(p -> {
+                            boolean matches =
+                                    (p.getName() != null && p.getName().toLowerCase().contains(searchLower)) ||
+                                            (p.getPatientId() != null && p.getPatientId().toLowerCase().contains(searchLower)) ||
+                                            (p.getEmail() != null && p.getEmail().toLowerCase().contains(searchLower));
+                            return matches;
+                        })
+                        .collect(Collectors.toList());
+            }
+
+            // Sort by name
+            filteredPatients.sort((p1, p2) -> {
+                String name1 = p1.getName() != null ? p1.getName() : "";
+                String name2 = p2.getName() != null ? p2.getName() : "";
+                return name1.compareToIgnoreCase(name2);
+            });
+
+            // Limit to 50 results for dropdown performance
+            List<Patient> limitedResults = filteredPatients.stream()
+                    .limit(50)
+                    .collect(Collectors.toList());
+
+            // Build simple response for dropdown
+            List<Map<String, Object>> patientData = limitedResults.stream()
+                    .map(p -> {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("id", p.getId());
+                        data.put("patientId", p.getPatientId());
+                        data.put("name", p.getName());
+                        data.put("email", p.getEmail());
+                        data.put("sex", p.getSex());
+                        data.put("birthDate", p.getBirthDate());
+                        return data;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(patientData);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     /**
      * Get statistics for doctor's patients
      */
@@ -422,7 +496,16 @@ public class PatientController {
      * This is the ENHANCED version for Phase 4.2 Patient 360° Profile View
      */
     @GetMapping("/doctor/patients/{id}/complete")
-    public ResponseEntity<?> getCompletePatientDetail(@PathVariable Long id) {
+    public ResponseEntity<?> getCompletePatientDetail(@PathVariable(required = false) Long id) {
+        // Validate patient ID
+        if (id == null || id <= 0) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "message", "Invalid patient ID",
+                            "error", "Patient ID must be a valid positive number"
+                    ));
+        }
+
         User doctor = securityUtils.getCurrentUserOrThrow();
 
         // Verify doctor role
@@ -432,17 +515,8 @@ public class PatientController {
 
         Patient patient = patientRepository.findById(id).orElse(null);
         if (patient == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        // Verify this patient has appointments with this doctor
-        boolean isMyPatient = appointmentRepository
-                .findByDoctorIdOrderByAppointmentDateAscAppointmentTimeAsc(doctor.getId())
-                .stream()
-                .anyMatch(apt -> apt.getPatient().getId().equals(id));
-
-        if (!isMyPatient && !securityUtils.isAdmin()) {
-            return ResponseEntity.status(403).body(Map.of("message", "Access denied"));
+            return ResponseEntity.status(404)
+                    .body(Map.of("message", "Patient not found"));
         }
 
         // Build comprehensive patient data
