@@ -215,6 +215,7 @@
                 <el-empty description="No studies found" />
               </div>
             </el-tab-pane>
+
             <!-- Prescriptions Tab -->
             <el-tab-pane name="prescriptions">
               <template #label>
@@ -258,12 +259,20 @@
                 </div>
               </div>
             </el-tab-pane>
-            <!--Clinical Notes tab-->
+
+            <!-- Clinical Notes Tab -->
             <el-tab-pane label="Clinical Notes" name="clinical-notes">
               <ClinicalNotesTab :patient-id="patient.id" />
             </el-tab-pane>
+
+            <!-- Treatment Plans Tab -->
             <el-tab-pane label="Treatment Plans" name="treatment-plans">
               <TreatmentPlansTab :patient-id="patient.id" />
+            </el-tab-pane>
+
+            <!-- MESSAGES TAB - NEW -->
+            <el-tab-pane label="Messages" name="messages">
+              <ChatTab v-if="patient.id" :patient-id="patient.id" />
             </el-tab-pane>
           </el-tabs>
         </el-card>
@@ -323,23 +332,23 @@ import { ElMessage } from 'element-plus'
 import PrescriptionsTab from './PrescriptionsTab.vue'
 import ClinicalNotesTab from '../clinical-notes/ClinicalNotesTab.vue'
 import TreatmentPlansTab from '../treatment-plans/TreatmentPlansTab.vue'
+import ChatTab from '../messages/ChatTab.vue'
 import {
   Calendar, FolderOpened, Document, View, ChatDotRound, Edit
-}
-from '@element-plus/icons-vue'
+} from '@element-plus/icons-vue'
 
 export default {
   name: 'PatientDetailView',
   components: {
-    Calendar, FolderOpened, Document, View, ChatDotRound, Edit, PrescriptionsTab, ClinicalNotesTab, TreatmentPlansTab
+    Calendar, FolderOpened, Document, View, ChatDotRound, Edit,
+    PrescriptionsTab, ClinicalNotesTab, TreatmentPlansTab, ChatTab
   },
   setup() {
     const route = useRoute()
     const router = useRouter()
     const loading = ref(false)
     const activeTab = ref('overview')
-    const prescriptions = ref([]); // ✅ Declare prescriptions here
-
+    const prescriptions = ref([])
 
     const patient = reactive({
       id: null,
@@ -423,23 +432,19 @@ export default {
       loading.value = true
       try {
         const patientId = route.params.id
-        // Use the ENHANCED complete endpoint for Phase 4.2
         const response = await http.get(`/patient/doctor/patients/${patientId}/complete`)
-        const prescriptions = ref([])
 
         // Assign all patient data
         Object.assign(patient, response.data)
 
-        // Load ALL appointments, reports, and studies (not just recent)
+        // Load appointments, reports, and studies
         appointments.value = response.data.recentAppointments || []
         reports.value = response.data.recentReports || []
         studies.value = response.data.recentStudies || []
 
-
         if (response.data.prescriptions) {
-          prescriptions.value = response.data.prescriptions;
+          prescriptions.value = response.data.prescriptions
         }
-
 
       } catch (error) {
         console.error('Failed to load patient:', error)
@@ -538,7 +543,8 @@ export default {
     }
 
     const sendMessage = () => {
-      ElMessage.info('Messaging feature coming in Phase 4.6')
+      // Switch to messages tab
+      activeTab.value = 'messages'
     }
 
     const editPatient = () => {
@@ -552,7 +558,6 @@ export default {
     const viewStudy = (study) => {
       router.push(`/studies/${study.id}`)
     }
-
 
     onMounted(() => {
       loadPatientDetail()
@@ -582,7 +587,8 @@ export default {
       editPatient,
       viewReport,
       viewStudy,
-      prescriptions
+      prescriptions,
+      loadPatientDetail
     }
   }
 }

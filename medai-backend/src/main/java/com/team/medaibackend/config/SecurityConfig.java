@@ -43,17 +43,32 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Public endpoints
                         .requestMatchers("/api/health", "/api/redis/ping").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
 
+                        // ✅ WebSocket endpoints (authentication handled in WebSocket interceptor)
+                        .requestMatchers("/ws/**").permitAll()
+
+                        // ✅ NEW: Users endpoint - allow GET for searching doctors (patients need this!)
+                        .requestMatchers(HttpMethod.GET, "/api/users").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/{id}").authenticated()
+
+                        // Admin routes
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/audit/**").hasRole("ADMIN")
 
+                        // Appointments
                         .requestMatchers("/api/appointments", "/api/appointments/**").authenticated()
 
+                        // Patients
                         .requestMatchers("/api/patients", "/api/patients/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
+
+                        // Studies
                         .requestMatchers("/api/studies/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN", "RESEARCHER")
 
+                        // Images and uploads
                         .requestMatchers("/api/images/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
                         .requestMatchers("/api/uploads/**").hasAnyRole("ADMIN", "DOCTOR", "NURSE", "TECHNICIAN")
 
@@ -63,12 +78,33 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/reports/**").hasAnyRole("ADMIN", "DOCTOR")
                         .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER", "PATIENT")
 
+                        // Worklist
                         .requestMatchers("/api/worklist/**").hasAnyRole("ADMIN", "DOCTOR")
+
+                        // Nurse routes
                         .requestMatchers("/api/nurse/**").hasAnyRole("ADMIN", "NURSE", "TECHNICIAN")
+
+                        // PACS
                         .requestMatchers("/api/pacs/**").hasAnyRole("ADMIN", "TECHNICIAN")
+
+                        // AI and DICOM
                         .requestMatchers("/api/ai/**").hasAnyRole("ADMIN", "DOCTOR", "RESEARCHER")
                         .requestMatchers("/api/dicom/**", "/api/storage/**").hasAnyRole("ADMIN", "DOCTOR", "TECHNICIAN")
 
+                        // ✅ Messages and Notifications - All authenticated users can access
+                        .requestMatchers("/api/conversations/**").authenticated()
+                        .requestMatchers("/api/messages/**").authenticated()
+                        .requestMatchers("/api/notifications/**").authenticated()
+
+                        // ✅ Clinical notes and treatment plans
+                        .requestMatchers("/api/clinical-notes/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers("/api/treatment-plans/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers("/api/prescriptions/**").hasAnyRole("DOCTOR", "ADMIN", "PATIENT")
+
+                        // ✅ Patient-specific routes
+                        .requestMatchers("/api/patient/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
+
+                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

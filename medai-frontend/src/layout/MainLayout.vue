@@ -52,6 +52,12 @@
             <span>Treatment Plans</span>
           </el-menu-item>
 
+          <!-- MESSAGES MENU ITEM FOR ADMIN -->
+          <el-menu-item index="/messages">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>Messages</span>
+          </el-menu-item>
+
           <el-menu-item index="/pacs">
             <el-icon><Connection /></el-icon>
             <span>PACS Management</span>
@@ -100,7 +106,11 @@
             <span>Appointments</span>
           </el-menu-item>
 
-
+          <!-- MESSAGES MENU ITEM FOR DOCTOR -->
+          <el-menu-item index="/messages">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>Messages</span>
+          </el-menu-item>
 
           <el-menu-item index="/pacs">
             <el-icon><Connection /></el-icon>
@@ -109,24 +119,22 @@
         </template>
 
         <!-- NURSE/TECHNICIAN MENU - Upload and scheduling -->
-        <!-- Schedule/Appointments - Role-based -->
-        <el-menu-item
-            v-if="userRole === 'NURSE' || userRole === 'TECHNICIAN'"
-            index="/nurse/schedule"
-        >
-          <el-icon><Calendar /></el-icon>
-          <span>Schedule</span>
-        </el-menu-item>
+        <template v-if="userRole === 'NURSE' || userRole === 'TECHNICIAN'">
+          <el-menu-item index="/nurse-dashboard">
+            <el-icon><Odometer /></el-icon>
+            <span>Dashboard</span>
+          </el-menu-item>
 
+          <el-menu-item index="/nurse/schedule">
+            <el-icon><Calendar /></el-icon>
+            <span>Schedule</span>
+          </el-menu-item>
 
-        <!-- Studies - for medical staff -->
-        <el-menu-item
-            v-if="userRole === 'NURSE' || userRole === 'TECHNICIAN'"
-            index="/studies"
-        >
-          <el-icon><FolderOpened /></el-icon>
-          <span>Studies</span>
-        </el-menu-item>
+          <el-menu-item index="/studies">
+            <el-icon><FolderOpened /></el-icon>
+            <span>Studies</span>
+          </el-menu-item>
+        </template>
 
         <!-- RESEARCHER MENU - Data and AI -->
         <template v-else-if="userRole === 'RESEARCHER'">
@@ -172,6 +180,12 @@
             <el-icon><FirstAidKit /></el-icon>
             <span>My Prescriptions</span>
           </el-menu-item>
+
+          <!-- MESSAGES MENU ITEM FOR PATIENT -->
+          <el-menu-item index="/my-messages">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>My Messages</span>
+          </el-menu-item>
         </template>
       </el-menu>
 
@@ -193,6 +207,10 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
+          <!-- NOTIFICATION BELL -->
+          <NotificationBell />
+
+          <!-- USER MENU -->
           <el-dropdown @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="32" class="user-avatar">{{ userInitial }}</el-avatar>
@@ -225,13 +243,12 @@
   </el-container>
 </template>
 
-
 <script>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { FirstAidKit } from '@element-plus/icons-vue'
-import { TrendCharts } from '@element-plus/icons-vue'
+import NotificationBell from '../components/NotificationBell.vue'
+import { FirstAidKit, TrendCharts, ChatDotRound } from '@element-plus/icons-vue'
 import {
   Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
   Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold
@@ -241,7 +258,8 @@ export default {
   name: 'MainLayout',
   components: {
     Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
-    Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold, FirstAidKit, TrendCharts
+    Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold,
+    FirstAidKit, TrendCharts, ChatDotRound, NotificationBell
   },
   setup() {
     const route = useRoute()
@@ -346,7 +364,11 @@ export default {
   padding: 0 20px;
 }
 
-.header-right { display: flex; align-items: center; gap: 20px; }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 
 .user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 

@@ -25,6 +25,21 @@ spring:
       max-request-size: 1GB
       file-size-threshold: 2KB
 
+
+  mail:
+    host: smtp.gmail.com  # or your SMTP server
+    port: 587
+    username: your-email@gmail.com
+    password: your-app-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+
 # JWT config should be at ROOT level, not under spring:
 jwt:
   secret: mySecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLong2024!

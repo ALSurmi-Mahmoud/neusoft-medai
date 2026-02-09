@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import router from '../router'
 
 const http = axios.create({
-    baseURL: '/api',
-    timeout: 30000,
+    baseURL: 'http://localhost:8080/api',
+    timeout: 10000,
     headers: {
         'Content-Type': 'application/json'
     }
@@ -23,60 +24,67 @@ http.interceptors.request.use(
     }
 )
 
-// Response interceptor - handle errors
+// Response interceptor - handle errors globally
 http.interceptors.response.use(
     (response) => {
         return response
     },
-    async (error) => {
-        const originalRequest = error.config
+    (error) => {
+        // ✅ FIX: Handle authentication errors during logout gracefully
+        if (error.response) {
+            const { status } = error.response
 
-        // Handle 401 Unauthorized - refresh token
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true
+            switch (status) {
+                case 401:
+                    // Unauthorized - token expired or invalid
+                    // Only show message if user is not already on login page
+                    if (router.currentRoute.value.path !== '/login') {
+                        ElMessage.warning('Session expired. Please login again.')
+                        localStorage.removeItem('accessToken')
+                        localStorage.removeItem('user')
+                        router.push('/login')
+                    }
+                    break
 
-            const refreshToken = localStorage.getItem('refreshToken')
-            if (refreshToken) {
-                try {
-                    const response = await axios.post('/api/auth/refresh', {
-                        refreshToken: refreshToken
-                    })
+                case 403:
+                    // Forbidden - user doesn't have permission
+                    // ✅ FIX: Don't show error during logout or if already logged out
+                    const isLoggedOut = !localStorage.getItem('accessToken')
+                    const isLoggingOut = router.currentRoute.value.path === '/login'
 
-                    const newToken = response.data.accessToken
-                    localStorage.setItem('accessToken', newToken)
+                    if (!isLoggedOut && !isLoggingOut) {
+                        // Only show error if user is actually logged in and not logging out
+                        if (!error.config.url?.includes('/notifications/unread-count')) {
+                            ElMessage.error('Access denied')
+                        }
+                    }
+                    break
 
-                    originalRequest.headers.Authorization = `Bearer ${newToken}`
-                    return http(originalRequest)
-                } catch (refreshError) {
-                    localStorage.removeItem('accessToken')
-                    localStorage.removeItem('refreshToken')
-                    localStorage.removeItem('user')
-                    window.location.href = '/login'
-                    return Promise.reject(refreshError)
-                }
-            } else {
-                window.location.href = '/login'
+                case 404:
+                    // Not found
+                    if (!error.config.skipErrorMessage) {
+                        ElMessage.error('Resource not found')
+                    }
+                    break
+
+                case 500:
+                    // Server error
+                    ElMessage.error('Server error. Please try again later.')
+                    break
+
+                default:
+                    // Other errors
+                    if (!error.config.skipErrorMessage) {
+                        const message = error.response.data?.message || 'An error occurred'
+                        ElMessage.error(message)
+                    }
             }
-        }
-
-        // NEW: Silent failures for endpoints that fail gracefully
-        const silentFailEndpoints = ['/stats', '/patients', '/nurse/dashboard', '/reports/study']
-        const shouldShowError = !silentFailEndpoints.some(endpoint =>
-            originalRequest.url?.includes(endpoint)
-        )
-
-        // Only show error notifications for critical failures
-        if (shouldShowError) {
-            if (error.response?.status === 403) {
-                ElMessage.error('Access denied')
-            } else if (error.response?.status === 404) {
-                ElMessage.error('Resource not found')
-            } else if (error.response?.status >= 500) {
-                ElMessage.error('Server error. Please try again later.')
-            }
+        } else if (error.request) {
+            // Request made but no response
+            ElMessage.error('Network error. Please check your connection.')
         } else {
-            // Just log to console for debugging
-            console.warn('Silent API failure:', originalRequest.url, error.response?.status)
+            // Something else happened
+            ElMessage.error('An error occurred')
         }
 
         return Promise.reject(error)

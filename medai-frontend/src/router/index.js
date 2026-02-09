@@ -4,6 +4,7 @@ import ClinicalNoteEditor from '../views/clinical-notes/ClinicalNoteEditor.vue'
 import ClinicalNoteList from '../views/clinical-notes/ClinicalNoteList.vue'
 import TreatmentPlanEditor from '../views/treatment-plans/TreatmentPlanEditor.vue'
 import TreatmentPlanList from '../views/treatment-plans/TreatmentPlanList.vue'
+import MessagesView from '../views/messages/MessagesView.vue'
 
 const routes = [
     {
@@ -97,7 +98,7 @@ const routes = [
                 meta: { title: 'New Report', roles: ['DOCTOR'] }
             },
             {
-                path: 'reports/:id/edit',  // ← CHANGED ORDER
+                path: 'reports/:id/edit',
                 name: 'EditReport',
                 component: () => import('../views/ReportEditorView.vue'),
                 meta: { title: 'Edit Report', roles: ['DOCTOR'] }
@@ -113,6 +114,18 @@ const routes = [
                 name: 'PatientDetail',
                 component: () => import('../views/doctor/PatientDetailView.vue'),
                 meta: { title: 'Patient Detail', roles: ['DOCTOR'] }
+            },
+
+            // MESSAGES ROUTE - UPDATED to include PATIENT
+            {
+                path: 'messages',
+                name: 'Messages',
+                component: MessagesView,
+                meta: {
+                    title: 'Messages',
+                    requiresAuth: true,
+                    roles: ['DOCTOR', 'ADMIN', 'PATIENT']  // ✅ Nurses removed (already not here)
+                }
             },
 
             // NURSE/TECHNICIAN routes
@@ -186,7 +199,13 @@ const routes = [
                 component: () => import('../views/patient/PrescriptionListView.vue'),
                 meta: { title: 'My Prescriptions', roles: ['PATIENT'] }
             },
-        //     notes
+            {
+                path: 'my-messages',
+                name: 'MyMessages',
+                component: MessagesView,
+                meta: { title: 'My Messages', roles: ['PATIENT'] }
+            },
+            // Clinical Notes
             {
                 path: '/clinical-notes',
                 name: 'ClinicalNotes',
@@ -206,7 +225,7 @@ const routes = [
                 props: route => ({ noteId: parseInt(route.params.id) }),
                 meta: { title: 'Edit Clinical Note', requiresAuth: true, roles: ['DOCTOR'] }
             },
-        //     treatment
+            // Treatment Plans
             {
                 path: '/treatment-plans',
                 name: 'TreatmentPlans',
