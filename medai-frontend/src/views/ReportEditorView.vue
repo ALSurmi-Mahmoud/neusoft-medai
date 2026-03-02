@@ -3,8 +3,39 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ isEditing ? 'Edit Report' : 'Create Diagnostic Report' }}</span>
+          <div class="header-left">
+            <img
+                v-if="exportConfig.logoUrl"
+                class="hospital-logo"
+                :src="exportConfig.logoUrl"
+                alt="Hospital Logo"
+                @error="onLogoError"
+            />
+            <div class="header-titles">
+              <div class="hospital-name">
+                {{ exportConfig.hospitalName }}
+              </div>
+              <div class="page-title">
+                {{ isEditing ? 'Edit Report' : 'Create Diagnostic Report' }}
+              </div>
+            </div>
+          </div>
+
           <div class="header-actions">
+            <el-dropdown @command="handleQuickExport" v-if="!loading && report.id" style="margin-right: 10px;">
+              <el-button type="success">
+                <el-icon><Download /></el-icon>
+                Quick Export
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="pdf">Export as PDF</el-dropdown-item>
+                  <el-dropdown-item command="docx">Export as DOCX</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+
             <el-tag v-if="report.status" :type="getStatusType(report.status)">
               {{ report.status }}
             </el-tag>
@@ -19,7 +50,6 @@
           label-width="140px"
           v-loading="loading"
       >
-        <!-- Study Info (Read-only) -->
         <el-card class="study-info-card" shadow="never">
           <template #header>Study & Patient Information</template>
           <el-row :gutter="20">
@@ -54,7 +84,6 @@
 
         <el-divider />
 
-        <!-- Report Content -->
         <el-form-item label="Report Title" prop="title">
           <el-input
               v-model="report.title"
@@ -105,7 +134,6 @@
 
         <el-divider />
 
-        <!-- AI Assistance Section -->
         <el-card class="ai-assist-card" shadow="never">
           <template #header>
             <div class="ai-header">
@@ -138,7 +166,6 @@
 
         <el-divider />
 
-        <!-- Action Buttons -->
         <el-form-item>
           <div class="form-actions">
             <el-button @click="$router.back()">Cancel</el-button>
@@ -171,11 +198,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import http from '../utils/http'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { MagicStick, Check } from '@element-plus/icons-vue'
+import { MagicStick, Check, Download, ArrowDown } from '@element-plus/icons-vue'
 
 export default {
   name: 'ReportEditorView',
-  components: { MagicStick, Check },
+  components: { MagicStick, Check, Download, ArrowDown },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -199,7 +226,12 @@ export default {
       status: 'draft',
       finalized: false
     })
-    // Extract patient info from query params (for appointment-based reports)
+
+    const exportConfig = reactive({
+      hospitalName: 'Medical Imaging Center',
+      logoUrl: ''
+    })
+
     const patientInfoFromQuery = reactive({
       patientId: route.query.patientId || null,
       patientName: route.query.patientName || null
@@ -210,6 +242,21 @@ export default {
     const rules = {
       title: [{ required: true, message: 'Please enter a title', trigger: 'blur' }],
       findings: [{ required: true, message: 'Please enter findings', trigger: 'blur' }]
+    }
+
+    const loadExportConfig = async () => {
+      try {
+        const res = await http.get('/config/export')
+        const data = res?.data || {}
+        exportConfig.hospitalName = data.hospitalName || exportConfig.hospitalName
+        exportConfig.logoUrl = data.logoUrl || exportConfig.logoUrl
+      } catch (e) {
+        // Config endpoint not available, keep defaults
+      }
+    }
+
+    const onLogoError = () => {
+      exportConfig.logoUrl = ''
     }
 
     const loadStudy = async (studyId) => {
@@ -240,11 +287,9 @@ export default {
           finalized: data.finalized
         })
 
-        // Only load study if studyId exists (not null)
         if (data.studyId) {
           await loadStudy(data.studyId)
         } else {
-          // General report without a study - clear study info
           studyInfo.value = {}
         }
       } catch (error) {
@@ -252,6 +297,49 @@ export default {
         ElMessage.error('Failed to load report')
       } finally {
         loading.value = false
+      }
+    }
+
+    const handleQuickExport = async (format) => {
+      try {
+        if (!report.id) {
+          ElMessage.warning('Please save the report first before exporting')
+          return
+        }
+
+        ElMessage.info(`Exporting report as ${format.toUpperCase()}...`)
+
+        const response = await http.post(
+            `/reports/${report.id}/export`,
+            null,
+            {
+              params: { format },
+              responseType: 'blob'
+            }
+        )
+
+        const blob = new Blob([response.data])
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+
+        const timestamp = new Date().toISOString()
+            .replace(/[:.]/g, '-')
+            .slice(0, 19)
+            .replace('T', '_')
+        const fileName = `Report_${report.id}_${timestamp}.${format}`
+
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+
+        ElMessage.success(`Report exported as ${format.toUpperCase()}`)
+
+      } catch (error) {
+        console.error('Quick export failed:', error)
+        ElMessage.error(error.response?.data?.message || 'Export failed')
       }
     }
 
@@ -269,7 +357,6 @@ export default {
           })
           ElMessage.success('Report saved')
         } else {
-          // Check if we have a patientId from query params (appointment flow)
           const patientIdFromQuery = route.query.patientId
 
           let endpoint = '/reports'
@@ -282,7 +369,6 @@ export default {
             recommendations: report.recommendations
           }
 
-          // If patientId is provided but no studyId, use the patient-specific endpoint
           if (patientIdFromQuery && !report.studyId) {
             endpoint = `/reports/patient/${patientIdFromQuery}`
             payload = {
@@ -324,7 +410,6 @@ export default {
     const finalizeReport = async () => {
       finalizing.value = true
       try {
-        // Save first if needed
         if (!report.id) {
           await saveDraft()
         }
@@ -347,8 +432,6 @@ export default {
       aiSuggestion.value = ''
 
       try {
-        // TODO: Integrate with actual AI model
-        // For now, generate placeholder suggestion
         await new Promise(resolve => setTimeout(resolve, 2000))
 
         aiSuggestion.value = `Based on the ${studyInfo.value.modality || 'imaging'} study analysis:
@@ -371,29 +454,28 @@ RECOMMENDATIONS: Clinical correlation recommended. Follow-up as clinically indic
     }
 
     const getStatusType = (status) => {
-      const types = { 'draft': 'info', 'finalized': 'success', 'amended': 'warning' }
+      const types = { draft: 'info', finalized: 'success', amended: 'warning' }
       return types[status] || 'info'
     }
 
     onMounted(async () => {
-      // Get studyId from route params or query
+      await loadExportConfig()
+
       const studyId = route.params.studyId || route.query.studyId
 
       if (studyId) {
         const studyIdNum = parseInt(studyId)
         if (!isNaN(studyIdNum)) {
           report.studyId = studyIdNum
-          await loadStudy(studyId) // keep studyId as-is for API path compatibility
+          await loadStudy(studyId)
         }
       }
 
-      // Get reportId from route params
       const reportId = route.params.id
       if (reportId && reportId !== 'new') {
         await loadReport(reportId)
       }
 
-      // If no studyId, show warning
       if (!report.studyId) {
         console.warn('No studyId provided for report creation')
       }
@@ -409,12 +491,15 @@ RECOMMENDATIONS: Clinical correlation recommended. Follow-up as clinically indic
       studyInfo,
       report,
       patientInfoFromQuery,
+      exportConfig,
       isEditing,
       rules,
       saveDraft,
       confirmFinalize,
       generateAIReport,
-      getStatusType
+      handleQuickExport,
+      getStatusType,
+      onLogoError
     }
   }
 }
@@ -431,6 +516,57 @@ RECOMMENDATIONS: Clinical correlation recommended. Follow-up as clinically indic
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hospital-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #ebeef5;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hospital-name {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 520px;
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 520px;
 }
 
 .study-info-card {

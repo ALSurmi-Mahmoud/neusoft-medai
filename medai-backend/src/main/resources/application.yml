@@ -59,3 +59,16 @@ orthanc:
   aet: MEDAI
   timeout-seconds: 30
   enabled: false
+
+# Export Configuration
+export:
+  hospital-name: "Medical Imaging Center"
+  logo-path: "${storage.local.root-path}/logos/hospital_logo.png"
+  pdf:
+    default-page-size: "A4"
+    default-font-family: "Arial"
+    default-font-size: 12
+    default-margin: 20
+  docx:
+    default-font-family: "Arial"
+    default-font-size: 12

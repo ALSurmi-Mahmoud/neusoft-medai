@@ -4,16 +4,14 @@ package com.team.medaibackend.web;
 import com.team.medaibackend.dto.CreateReportRequest;
 import com.team.medaibackend.dto.ReportDto;
 import com.team.medaibackend.dto.UpdateReportRequest;
-import com.team.medaibackend.entity.Patient;
-import com.team.medaibackend.entity.Report;
-import com.team.medaibackend.entity.Study;
-import com.team.medaibackend.entity.User;
+import com.team.medaibackend.entity.*;
 import com.team.medaibackend.repository.PatientRepository;
 import com.team.medaibackend.repository.ReportRepository;
 import com.team.medaibackend.repository.StudyRepository;
 import com.team.medaibackend.repository.UserRepository;
 import com.team.medaibackend.security.SecurityUtils;
 import com.team.medaibackend.service.AuditService;
+import com.team.medaibackend.service.ReportExportService;
 import com.team.medaibackend.service.ReportService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -21,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +37,7 @@ public class ReportController {
     private final PatientRepository patientRepository;
     private final StudyRepository studyRepository;
     private final SecurityUtils securityUtils;
+    private final ReportExportService exportService;  // Add to constructor
 
     public ReportController(
             ReportService reportService,
@@ -46,7 +46,7 @@ public class ReportController {
             UserRepository userRepository,
             PatientRepository patientRepository,
             StudyRepository studyRepository,
-            SecurityUtils securityUtils
+            SecurityUtils securityUtils, ReportExportService exportService
     ) {
         this.reportService = reportService;
         this.reportRepository = reportRepository;
@@ -55,6 +55,7 @@ public class ReportController {
         this.patientRepository = patientRepository;
         this.studyRepository = studyRepository;
         this.securityUtils = securityUtils;
+        this.exportService = exportService;
     }
 
     @PostMapping
@@ -117,6 +118,25 @@ public class ReportController {
         User currentUser = securityUtils.getCurrentUserOrThrow();
         ReportDto report = reportService.finalizeReport(id, currentUser.getId());
         return ResponseEntity.ok(report);
+    }
+
+    @PostMapping("/{id}/export")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
+    public ResponseEntity<?> quickExportReport(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "pdf") String format) {
+        try {
+            ExportedReport export = exportService.exportReport(id, format, null);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("exportId", export.getId());
+            response.put("fileName", export.getFileName());
+            response.put("message", "Report exported successfully");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")

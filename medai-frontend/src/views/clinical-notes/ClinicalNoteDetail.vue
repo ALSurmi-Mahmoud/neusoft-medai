@@ -7,7 +7,6 @@
   >
     <div v-loading="loading" class="note-detail">
       <div v-if="note" class="note-content">
-        <!-- Header Info -->
         <div class="note-header">
           <div class="header-row">
             <div class="info-item">
@@ -43,12 +42,9 @@
 
         <el-divider />
 
-        <!-- Title -->
         <h3>{{ note.title }}</h3>
 
-        <!-- SOAP Note -->
         <div v-if="note.noteType === 'soap'" class="soap-content">
-          <!-- Vitals -->
           <div v-if="note.vitals && hasVitals" class="vitals-section">
             <h4>Vital Signs</h4>
             <el-row :gutter="15">
@@ -85,7 +81,6 @@
             </el-row>
           </div>
 
-          <!-- SOAP Sections -->
           <div class="soap-section" v-if="note.subjective">
             <h4>S - Subjective</h4>
             <p class="section-content">{{ note.subjective }}</p>
@@ -107,12 +102,10 @@
           </div>
         </div>
 
-        <!-- General Content -->
         <div v-else class="general-content">
           <p class="section-content">{{ note.content }}</p>
         </div>
 
-        <!-- Footer Info -->
         <el-divider />
         <div class="note-footer">
           <small>Created: {{ formatDateTime(note.createdAt) }}</small>
@@ -123,9 +116,25 @@
 
     <template #footer>
       <el-button @click="handleClose">Close</el-button>
+
       <el-button type="primary" @click="printNote">
         <el-icon><Printer /></el-icon> Print
       </el-button>
+
+      <el-dropdown @command="exportNote" v-if="note && note.finalized">
+        <el-button type="success">
+          <el-icon><Download /></el-icon>
+          Export Note
+          <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="pdf">Export as PDF</el-dropdown-item>
+            <el-dropdown-item command="docx">Export as DOCX</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+
       <el-button v-if="note && !note.finalized" type="primary" @click="editNote">
         <el-icon><Edit /></el-icon> Edit
       </el-button>
@@ -138,11 +147,11 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '../../utils/http'
 import { ElMessage } from 'element-plus'
-import { Printer, Edit } from '@element-plus/icons-vue'
+import { Printer, Edit, Download, ArrowDown } from '@element-plus/icons-vue'
 
 export default {
   name: 'ClinicalNoteDetail',
-  components: { Printer, Edit },
+  components: { Printer, Edit, Download, ArrowDown },
   props: {
     modelValue: Boolean,
     noteId: Number
@@ -175,6 +184,51 @@ export default {
         handleClose()
       } finally {
         loading.value = false
+      }
+    }
+
+    const exportNote = async (format) => {
+      try {
+        if (!note.value?.id) {
+          ElMessage.warning('No note loaded')
+          return
+        }
+
+        ElMessage.info(`Exporting clinical note as ${format.toUpperCase()}...`)
+
+        const response = await http.post(
+            `/clinical-notes/${note.value.id}/export`,
+            null,
+            {
+              params: { format },
+              responseType: 'blob'
+            }
+        )
+
+        const blob = new Blob([response.data])
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+
+        const patientName = note.value?.patientName || 'Patient'
+        const sanitizedName = patientName.replace(/[^a-z0-9]/gi, '_')
+        const timestamp = new Date().toISOString()
+            .replace(/[:.]/g, '-')
+            .slice(0, 19)
+            .replace('T', '_')
+        const fileName = `ClinicalNote_${sanitizedName}_${timestamp}.${format}`
+
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+
+        ElMessage.success(`Clinical note exported as ${format.toUpperCase()}`)
+
+      } catch (error) {
+        console.error('Export error:', error)
+        ElMessage.error(error.response?.data?.message || 'Export failed')
       }
     }
 
@@ -223,6 +277,7 @@ export default {
       formatDate,
       formatDateTime,
       printNote,
+      exportNote,
       editNote,
       handleClose
     }

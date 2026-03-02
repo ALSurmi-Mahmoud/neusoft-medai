@@ -4,6 +4,16 @@
       <template #header>
         <div class="card-header">
           <span>Diagnostic Reports</span>
+          <div class="header-actions">
+            <el-button type="primary" @click="loadReports">
+              <el-icon><Search /></el-icon>
+              Refresh
+            </el-button>
+            <el-button type="primary" @click="exportPDF" :loading="exporting">
+              <el-icon><Download /></el-icon>
+              Export PDF
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -11,49 +21,33 @@
       <el-form :inline="true" class="filter-form">
         <el-form-item label="Status">
           <el-select v-model="filters.status" placeholder="All" clearable @change="loadReports">
-            <el-option label="Draft" value="draft" />
-            <el-option label="Finalized" value="finalized" />
-            <el-option label="Amended" value="amended" />
+            <el-option label="DRAFT" value="DRAFT" />
+            <el-option label="FINAL" value="FINAL" />
           </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="loadReports">
-            <el-icon><Search /></el-icon>
-            Search
-          </el-button>
         </el-form-item>
       </el-form>
 
-      <!-- Reports Table -->
-      <el-table :data="reports" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="reportUid" label="Report UID" width="150">
+      <!-- Table -->
+      <el-table
+          v-loading="loading"
+          :data="reports"
+          stripe
+          border
+          style="width: 100%"
+      >
+        <el-table-column prop="reportUid" label="Report UID" min-width="220" />
+        <el-table-column prop="patientId" label="Patient ID" width="140" />
+        <el-table-column prop="authorName" label="Author" width="180" />
+        <el-table-column prop="title" label="Title" min-width="220" />
+        <el-table-column prop="status" label="Status" width="120">
           <template #default="{ row }">
-            <span class="uid-text">{{ row.reportUid }}</span>
+            <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="Title" min-width="200">
+        <el-table-column prop="finalized" label="Finalized" width="120">
           <template #default="{ row }">
-            {{ row.title || 'Untitled Report' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Patient" width="200">
-          <template #default="{ row }">
-            <div v-if="row.patientName">
-              <div style="font-weight: 500;">{{ row.patientName }}</div>
-              <div style="font-size: 11px; color: #909399;">{{ row.patientId }}</div>
-            </div>
-            <div v-else>
-              {{ row.patientId || 'N/A' }}
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="authorName" label="Author" width="150" />
-        <el-table-column prop="status" label="Status" width="110">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ row.status }}
-              <el-icon v-if="row.finalized"><Check /></el-icon>
+            <el-tag :type="row.finalized ? 'success' : 'info'">
+              {{ row.finalized ? 'Yes' : 'No' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -62,6 +56,7 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
+
         <el-table-column label="Actions" width="200" fixed="right">
           <template #default="{ row }">
             <el-button-group>
@@ -84,10 +79,24 @@
               >
                 <el-icon><Delete /></el-icon>
               </el-button>
+
+              <!-- Add to template in actions column -->
+              <el-button size="small" type="success" @click="openExportDialog(row)">
+                <el-icon><Download /></el-icon>
+                Export
+              </el-button>
             </el-button-group>
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- Add after table -->
+      <ReportExportDialog
+          ref="exportDialog"
+          :report-id="selectedReportId"
+          category="radiology"
+          @exported="loadReports"
+      />
 
       <!-- Pagination -->
       <el-pagination
@@ -121,24 +130,14 @@
 
         <el-divider />
 
-        <h4>Summary</h4>
-        <p class="report-text">{{ selectedReport.summary || 'No summary provided' }}</p>
-
-        <h4>Findings</h4>
-        <p class="report-text">{{ selectedReport.findings || 'No findings documented' }}</p>
-
-        <h4>Impression</h4>
-        <p class="report-text">{{ selectedReport.impression || 'No impression documented' }}</p>
-
-        <h4>Recommendations</h4>
-        <p class="report-text">{{ selectedReport.recommendations || 'No recommendations' }}</p>
+        <div class="report-content">
+          <h4>Content</h4>
+          <pre class="content-pre">{{ selectedReport.content || 'No content' }}</pre>
+        </div>
       </div>
+
       <template #footer>
         <el-button @click="viewDialogVisible = false">Close</el-button>
-        <el-button type="primary" @click="exportPDF" :loading="exporting">
-          <el-icon><Download /></el-icon>
-          Export PDF
-        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -150,10 +149,12 @@ import { useRouter } from 'vue-router'
 import http from '../utils/http'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, Edit, Delete, Check, Download } from '@element-plus/icons-vue'
+import ReportExportDialog from './reports/ReportExportDialog.vue'
+
 
 export default {
   name: 'ReportListView',
-  components: { Search, View, Edit, Delete, Check, Download },
+  components: { Search, View, Edit, Delete, Check, Download, ReportExportDialog },
   setup() {
     const router = useRouter()
 
@@ -163,13 +164,22 @@ export default {
     const viewDialogVisible = ref(false)
     const exporting = ref(false)
 
+    // Add to setup()
+    const exportDialog = ref(null)
+    const selectedReportId = ref(null)
+
+    const openExportDialog = (report) => {
+      selectedReportId.value = report.id
+      exportDialog.value.open()
+    }
+
     const filters = reactive({
       status: ''
     })
 
     const pagination = reactive({
       page: 1,
-      size: 20,
+      size: 10,
       total: 0
     })
 
@@ -182,75 +192,91 @@ export default {
         }
         if (filters.status) params.status = filters.status
 
-        const response = await http.get('/reports', { params })
-        reports.value = response.data.content || []
-        pagination.total = response.data.totalElements || 0
-      } catch (error) {
-        console.error('Failed to load reports:', error)
-        ElMessage.error('Failed to load reports')
+        const res = await http.get('/reports', { params })
+        reports.value = res.data.content || []
+        pagination.total = res.data.totalElements || 0
+      } catch (e) {
+        ElMessage.error(e?.response?.data?.message || 'Failed to load reports')
       } finally {
         loading.value = false
       }
     }
 
-    const viewReport = (report) => {
-      selectedReport.value = report
-      viewDialogVisible.value = true
+    const viewReport = async (report) => {
+      try {
+        const res = await http.get(`/reports/${report.id}`)
+        selectedReport.value = res.data
+        viewDialogVisible.value = true
+      } catch (e) {
+        ElMessage.error(e?.response?.data?.message || 'Failed to load report')
+      }
     }
 
     const editReport = (report) => {
-      router.push(`/reports/${report.id}/edit`)
+      router.push({ name: 'ReportEdit', params: { id: report.id } })
     }
 
-    const confirmDelete = (report) => {
-      ElMessageBox.confirm(
-          `Are you sure you want to delete report "${report.reportUid}"?`,
-          'Confirm Delete',
-          {
-            confirmButtonText: 'Delete',
-            cancelButtonText: 'Cancel',
-            type: 'warning'
-          }
-      ).then(async () => {
-        try {
-          await http.delete(`/reports/${report.id}`)
-          ElMessage.success('Report deleted')
-          loadReports()
-        } catch (error) {
-          ElMessage.error('Failed to delete report')
+    const confirmDelete = async (report) => {
+      try {
+        await ElMessageBox.confirm(
+            `Delete report ${report.reportUid}?`,
+            'Confirm',
+            { type: 'warning' }
+        )
+        await http.delete(`/reports/${report.id}`)
+        ElMessage.success('Deleted')
+        await loadReports()
+      } catch (e) {
+        if (e !== 'cancel') {
+          ElMessage.error(e?.response?.data?.message || 'Delete failed')
         }
-      }).catch(() => {})
+      }
     }
 
     const exportPDF = async () => {
       exporting.value = true
       // TODO: Implement PDF export
-      setTimeout(() => {
+      try {
         ElMessage.info('PDF export feature coming soon')
+      } finally {
         exporting.value = false
-      }, 1000)
+      }
     }
 
-    const formatDate = (dateStr) => {
-      if (!dateStr) return '-'
-      return new Date(dateStr).toLocaleString()
+    const formatDate = (val) => {
+      if (!val) return '-'
+      try {
+        return new Date(val).toLocaleString()
+      } catch {
+        return String(val)
+      }
     }
 
     const getStatusType = (status) => {
-      const types = { 'draft': 'info', 'finalized': 'success', 'amended': 'warning' }
-      return types[status] || 'info'
+      switch (status) {
+        case 'FINAL':
+          return 'success'
+        case 'DRAFT':
+          return 'warning'
+        default:
+          return 'info'
+      }
     }
 
     onMounted(() => {
       loadReports()
     })
 
+    // Add to return
     return {
       loading,
       reports,
       selectedReport,
       viewDialogVisible,
       exporting,
+      exportDialog,
+      selectedReportId,
+      openExportDialog,
       filters,
       pagination,
       loadReports,
@@ -276,31 +302,27 @@ export default {
   align-items: center;
 }
 
-.filter-form {
-  margin-bottom: 20px;
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
-.uid-text {
-  font-family: monospace;
-  font-size: 12px;
+.filter-form {
+  margin-bottom: 16px;
 }
 
 .report-detail {
-  max-height: 60vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.report-text {
-  padding: 15px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
+.report-content .content-pre {
   white-space: pre-wrap;
-  min-height: 60px;
-}
-
-h4 {
-  margin-top: 20px;
-  margin-bottom: 10px;
-  color: #333;
+  background: #f7f7f7;
+  padding: 12px;
+  border-radius: 6px;
+  max-height: 300px;
+  overflow: auto;
 }
 </style>

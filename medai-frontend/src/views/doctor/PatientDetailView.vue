@@ -274,6 +274,11 @@
             <el-tab-pane label="Messages" name="messages">
               <ChatTab v-if="patient.id" :patient-id="patient.id" />
             </el-tab-pane>
+
+            <el-tab-pane label="Export Summary" name="export">
+              <PatientSummaryExport v-if="patient.id" :patient-id="patient.id" />
+            </el-tab-pane>
+
           </el-tabs>
         </el-card>
       </el-col>
@@ -332,6 +337,9 @@ import { ElMessage } from 'element-plus'
 import PrescriptionsTab from './PrescriptionsTab.vue'
 import ClinicalNotesTab from '../clinical-notes/ClinicalNotesTab.vue'
 import TreatmentPlansTab from '../treatment-plans/TreatmentPlansTab.vue'
+import PatientSummaryExport from '../patient/PatientSummaryExport.vue'
+
+
 import ChatTab from '../messages/ChatTab.vue'
 import {
   Calendar, FolderOpened, Document, View, ChatDotRound, Edit
@@ -341,7 +349,7 @@ export default {
   name: 'PatientDetailView',
   components: {
     Calendar, FolderOpened, Document, View, ChatDotRound, Edit,
-    PrescriptionsTab, ClinicalNotesTab, TreatmentPlansTab, ChatTab
+    PrescriptionsTab, ClinicalNotesTab, TreatmentPlansTab, ChatTab, PatientSummaryExport
   },
   setup() {
     const route = useRoute()

@@ -104,6 +104,16 @@ const routes = [
                 meta: { title: 'Edit Report', roles: ['DOCTOR'] }
             },
             {
+                path: 'exports',
+                name: 'Exports',
+                component: () => import('../views/exports/ExportsView.vue'),
+                meta: {
+                    title: 'My Exports',
+                    requiresAuth: true,
+                    roles: ['DOCTOR', 'ADMIN']
+                }
+            },
+            {
                 path: 'my-patients',
                 name: 'MyPatients',
                 component: () => import('../views/doctor/MyPatientsView.vue'),

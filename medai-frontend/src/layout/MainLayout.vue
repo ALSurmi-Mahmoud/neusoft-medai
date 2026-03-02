@@ -52,6 +52,12 @@
             <span>Treatment Plans</span>
           </el-menu-item>
 
+          <!-- ✅ NEW: MY EXPORTS -->
+          <el-menu-item index="/exports">
+            <el-icon><Download /></el-icon>
+            <span>My Exports</span>
+          </el-menu-item>
+
           <!-- MESSAGES MENU ITEM FOR ADMIN -->
           <el-menu-item index="/messages">
             <el-icon><ChatDotRound /></el-icon>
@@ -99,6 +105,12 @@
           <el-menu-item index="/reports">
             <el-icon><Document /></el-icon>
             <span>Reports</span>
+          </el-menu-item>
+
+          <!-- ✅ NEW: MY EXPORTS -->
+          <el-menu-item index="/exports">
+            <el-icon><Download /></el-icon>
+            <span>My Exports</span>
           </el-menu-item>
 
           <el-menu-item index="/appointments">
@@ -251,14 +263,14 @@ import NotificationBell from '../components/NotificationBell.vue'
 import { FirstAidKit, TrendCharts, ChatDotRound } from '@element-plus/icons-vue'
 import {
   Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
-  Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold
+  Setting, User, Monitor, List, Cpu, Download, ArrowDown, SwitchButton, Expand, Fold
 } from '@element-plus/icons-vue'
 
 export default {
   name: 'MainLayout',
   components: {
     Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
-    Setting, User, Monitor, List, Cpu, ArrowDown, SwitchButton, Expand, Fold,
+    Setting, User, Monitor, List, Cpu, Download, ArrowDown, SwitchButton, Expand, Fold,
     FirstAidKit, TrendCharts, ChatDotRound, NotificationBell
   },
   setup() {
