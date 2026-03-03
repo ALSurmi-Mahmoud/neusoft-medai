@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,4 +80,7 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, Lo
     // Get recent plans (last N days)
     @Query("SELECT p FROM TreatmentPlan p WHERE p.startDate >= :since ORDER BY p.startDate DESC")
     List<TreatmentPlan> findRecentPlans(@Param("since") LocalDate since);
+
+    // Analytics methods
+    List<TreatmentPlan> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

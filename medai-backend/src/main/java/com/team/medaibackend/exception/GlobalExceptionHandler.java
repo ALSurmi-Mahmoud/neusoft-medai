@@ -2,6 +2,7 @@ package com.team.medaibackend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -12,6 +13,23 @@ import java.util.Map;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Handle Spring Security authorization denied exceptions
+     * Returns 403 instead of 500 and suppresses stack traces
+     */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthorizationDenied(
+            AuthorizationDeniedException ex) {
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "Access Denied");
+        error.put("message", "You don't have permission to access this resource");
+        error.put("timestamp", System.currentTimeMillis());
+
+        // Return 403 Forbidden instead of 500 Internal Server Error
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
 
     /**
      * Handle parameter type conversion errors (e.g., "null" string to Long)

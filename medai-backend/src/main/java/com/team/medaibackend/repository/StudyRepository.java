@@ -40,9 +40,11 @@ public interface StudyRepository extends JpaRepository<Study, Long> {
                               @Param("dateFrom") LocalDateTime dateFrom,
                               @Param("dateTo") LocalDateTime dateTo,
                               Pageable pageable);
+
     @Query("SELECT COUNT(s) FROM Study s WHERE FUNCTION('DATE', s.createdAt) = :date")
     long countByCreatedAtDate(@Param("date") LocalDate date);
 
-
-
+    // Analytics methods
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    List<Study> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

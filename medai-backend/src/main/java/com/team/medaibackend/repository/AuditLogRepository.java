@@ -39,7 +39,9 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     @Query("UPDATE AuditLog a SET a.userId = NULL WHERE a.userId = :userId")
     void nullifyUserReferences(@Param("userId") Long userId);
 
-
-
     List<AuditLog> findByResourceTypeAndResourceId(String resourceType, String resourceId);
+
+    // Analytics methods
+    List<AuditLog> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    List<AuditLog> findByCreatedAtAfterOrderByCreatedAtDesc(LocalDateTime after);
 }

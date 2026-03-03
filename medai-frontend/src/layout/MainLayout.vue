@@ -42,6 +42,34 @@
             </el-menu-item>
           </el-sub-menu>
 
+          <!-- ✅ NEW: ANALYTICS SUBMENU FOR ADMIN -->
+          <el-sub-menu index="analytics">
+            <template #title>
+              <el-icon><DataAnalysis /></el-icon>
+              <span>Analytics</span>
+            </template>
+            <el-menu-item index="/analytics/dashboard">
+              <el-icon><Odometer /></el-icon>
+              <span>Dashboard</span>
+            </el-menu-item>
+            <el-menu-item index="/analytics/patients">
+              <el-icon><User /></el-icon>
+              <span>Patients</span>
+            </el-menu-item>
+            <el-menu-item index="/analytics/studies">
+              <el-icon><FolderOpened /></el-icon>
+              <span>Studies</span>
+            </el-menu-item>
+            <el-menu-item index="/analytics/reports">
+              <el-icon><Document /></el-icon>
+              <span>Reports</span>
+            </el-menu-item>
+            <el-menu-item index="/analytics/system">
+              <el-icon><Monitor /></el-icon>
+              <span>System</span>
+            </el-menu-item>
+          </el-sub-menu>
+
           <el-menu-item index="/clinical-notes">
             <el-icon><Document /></el-icon>
             <span>Clinical Notes</span>
@@ -52,7 +80,7 @@
             <span>Treatment Plans</span>
           </el-menu-item>
 
-          <!-- ✅ NEW: MY EXPORTS -->
+          <!-- ✅ MY EXPORTS -->
           <el-menu-item index="/exports">
             <el-icon><Download /></el-icon>
             <span>My Exports</span>
@@ -92,6 +120,30 @@
             <span>Studies</span>
           </el-menu-item>
 
+          <!-- ✅ NEW: ANALYTICS SUBMENU FOR DOCTOR -->
+          <el-sub-menu index="analytics">
+            <template #title>
+              <el-icon><DataAnalysis /></el-icon>
+              <span>Analytics</span>
+            </template>
+            <el-menu-item index="/analytics/dashboard">
+              <el-icon><Odometer /></el-icon>
+              <span>Dashboard</span>
+            </el-menu-item>
+            <el-menu-item index="/analytics/patients">
+              <el-icon><User /></el-icon>
+              <span>Patients</span>
+            </el-menu-item>
+            <el-menu-item index="/analytics/studies">
+              <el-icon><FolderOpened /></el-icon>
+              <span>Studies</span>
+            </el-menu-item>
+            <el-menu-item index="/analytics/reports">
+              <el-icon><Document /></el-icon>
+              <span>Reports</span>
+            </el-menu-item>
+          </el-sub-menu>
+
           <el-menu-item index="/clinical-notes">
             <el-icon><Document /></el-icon>
             <span>Clinical Notes</span>
@@ -107,7 +159,7 @@
             <span>Reports</span>
           </el-menu-item>
 
-          <!-- ✅ NEW: MY EXPORTS -->
+          <!-- ✅ MY EXPORTS -->
           <el-menu-item index="/exports">
             <el-icon><Download /></el-icon>
             <span>My Exports</span>
@@ -260,7 +312,12 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import NotificationBell from '../components/NotificationBell.vue'
-import { FirstAidKit, TrendCharts, ChatDotRound } from '@element-plus/icons-vue'
+import {
+  FirstAidKit,
+  TrendCharts,
+  ChatDotRound,
+  DataAnalysis  // ✅ NEW: Analytics icon
+} from '@element-plus/icons-vue'
 import {
   Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
   Setting, User, Monitor, List, Cpu, Download, ArrowDown, SwitchButton, Expand, Fold
@@ -271,7 +328,8 @@ export default {
   components: {
     Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
     Setting, User, Monitor, List, Cpu, Download, ArrowDown, SwitchButton, Expand, Fold,
-    FirstAidKit, TrendCharts, ChatDotRound, NotificationBell
+    FirstAidKit, TrendCharts, ChatDotRound, NotificationBell,
+    DataAnalysis  // ✅ NEW: Register Analytics icon
   },
   setup() {
     const route = useRoute()

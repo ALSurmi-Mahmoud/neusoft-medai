@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,4 +36,9 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
         ORDER BY r.createdAt DESC
     """)
     List<Report> findByPatientId(@Param("patientId") Long patientId);
+
+    // Analytics methods
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    long countByStatusAndCreatedAtBetween(String status, LocalDateTime start, LocalDateTime end);
+    List<Report> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

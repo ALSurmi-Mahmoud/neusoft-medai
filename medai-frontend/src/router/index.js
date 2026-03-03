@@ -268,6 +268,52 @@ const routes = [
                     requiresAuth: true,
                     roles: ['DOCTOR']
                 }
+            },
+            // Analytics Routes - Direct children of main layout
+            {
+                path: 'analytics/dashboard',
+                name: 'AnalyticsDashboard',
+                component: () => import('@/views/analytics/DashboardView.vue'),
+                meta: {
+                    title: 'Analytics Dashboard',
+                    roles: ['DOCTOR', 'ADMIN']
+                }
+            },
+            {
+                path: 'analytics/patients',
+                name: 'PatientAnalytics',
+                component: () => import('@/views/analytics/PatientAnalyticsView.vue'),
+                meta: {
+                    title: 'Patient Analytics',
+                    roles: ['DOCTOR', 'ADMIN']
+                }
+            },
+            {
+                path: 'analytics/studies',
+                name: 'StudyAnalytics',
+                component: () => import('@/views/analytics/StudyAnalyticsView.vue'),
+                meta: {
+                    title: 'Study Analytics',
+                    roles: ['DOCTOR', 'ADMIN']
+                }
+            },
+            {
+                path: 'analytics/reports',
+                name: 'ReportAnalytics',
+                component: () => import('@/views/analytics/ReportAnalyticsView.vue'),
+                meta: {
+                    title: 'Report Analytics',
+                    roles: ['DOCTOR', 'ADMIN']
+                }
+            },
+            {
+                path: 'analytics/system',
+                name: 'SystemAnalytics',
+                component: () => import('@/views/analytics/SystemAnalyticsView.vue'),
+                meta: {
+                    title: 'System Analytics',
+                    roles: ['ADMIN']
+                }
             }
         ]
     },
