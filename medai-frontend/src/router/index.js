@@ -1,4 +1,4 @@
-// src/router/index.js (or src/router/index.ts)
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import ClinicalNoteEditor from '../views/clinical-notes/ClinicalNoteEditor.vue'
 import ClinicalNoteList from '../views/clinical-notes/ClinicalNoteList.vue'
@@ -58,12 +58,48 @@ const routes = [
                 meta: { title: 'My Health', roles: ['PATIENT'] }
             },
 
-            // ADMIN ONLY routes
+            // ✅ SEARCH ROUTES
+            {
+                path: 'search',
+                name: 'GlobalSearch',
+                component: () => import('../views/search/GlobalSearchView.vue'),
+                meta: { title: 'Search', requiresAuth: true }
+            },
+            {
+                path: 'saved-searches',
+                name: 'SavedSearches',
+                component: () => import('../views/search/SavedSearchesView.vue'),
+                meta: {
+                    title: 'Saved Searches',
+                    requiresAuth: true,
+                    roles: ['ADMIN', 'DOCTOR', 'RESEARCHER']
+                }
+            },
+
+            // ✅ ADMIN PANEL ROUTES (UPDATED)
+            {
+                path: 'admin/dashboard',
+                name: 'AdminPanelDashboard',
+                component: () => import('../views/admin/AdminDashboardView.vue'),
+                meta: { title: 'Admin Panel', roles: ['ADMIN'] }
+            },
             {
                 path: 'admin/users',
                 name: 'UserManagement',
                 component: () => import('../views/admin/UserManagementView.vue'),
                 meta: { title: 'User Management', roles: ['ADMIN'] }
+            },
+            {
+                path: 'admin/settings',
+                name: 'SystemSettings',
+                component: () => import('../views/admin/SystemSettingsView.vue'),
+                meta: { title: 'System Settings', roles: ['ADMIN'] }
+            },
+            {
+                path: 'admin/logs',
+                name: 'SystemLogs',
+                component: () => import('../views/admin/SystemLogsView.vue'),
+                meta: { title: 'System Logs', roles: ['ADMIN'] }
             },
             {
                 path: 'admin/system',
@@ -125,8 +161,20 @@ const routes = [
                 component: () => import('../views/doctor/PatientDetailView.vue'),
                 meta: { title: 'Patient Detail', roles: ['DOCTOR'] }
             },
+            {
+                path: 'doctor/patients/:id',
+                redirect: to => {
+                    return { path: `/patients/${to.params.id}` }
+                }
+            },
+            {
+                path: 'doctor/treatment-plans/:id',
+                redirect: to => {
+                    return { path: `/treatment-plans/${to.params.id}/edit` }
+                }
+            },
 
-            // MESSAGES ROUTE - UPDATED to include PATIENT
+            // MESSAGES ROUTE
             {
                 path: 'messages',
                 name: 'Messages',
@@ -134,7 +182,7 @@ const routes = [
                 meta: {
                     title: 'Messages',
                     requiresAuth: true,
-                    roles: ['DOCTOR', 'ADMIN', 'PATIENT']  // ✅ Nurses removed (already not here)
+                    roles: ['DOCTOR', 'ADMIN', 'PATIENT']
                 }
             },
 
@@ -215,29 +263,31 @@ const routes = [
                 component: MessagesView,
                 meta: { title: 'My Messages', roles: ['PATIENT'] }
             },
+
             // Clinical Notes
             {
-                path: '/clinical-notes',
+                path: 'clinical-notes',
                 name: 'ClinicalNotes',
                 component: ClinicalNoteList,
                 meta: { title: 'Clinical Notes', requiresAuth: true, roles: ['DOCTOR', 'ADMIN'] }
             },
             {
-                path: '/clinical-notes/new',
+                path: 'clinical-notes/new',
                 name: 'NewClinicalNote',
                 component: ClinicalNoteEditor,
                 meta: { title: 'New Clinical Note', requiresAuth: true, roles: ['DOCTOR'] }
             },
             {
-                path: '/clinical-notes/:id/edit',
+                path: 'clinical-notes/:id/edit',
                 name: 'EditClinicalNote',
                 component: ClinicalNoteEditor,
                 props: route => ({ noteId: parseInt(route.params.id) }),
                 meta: { title: 'Edit Clinical Note', requiresAuth: true, roles: ['DOCTOR'] }
             },
+
             // Treatment Plans
             {
-                path: '/treatment-plans',
+                path: 'treatment-plans',
                 name: 'TreatmentPlans',
                 component: TreatmentPlanList,
                 meta: {
@@ -247,7 +297,7 @@ const routes = [
                 }
             },
             {
-                path: '/treatment-plans/new',
+                path: 'treatment-plans/new',
                 name: 'NewTreatmentPlan',
                 component: TreatmentPlanEditor,
                 meta: {
@@ -257,7 +307,7 @@ const routes = [
                 }
             },
             {
-                path: '/treatment-plans/:id/edit',
+                path: 'treatment-plans/:id/edit',
                 name: 'EditTreatmentPlan',
                 component: TreatmentPlanEditor,
                 props: route => ({
@@ -269,11 +319,12 @@ const routes = [
                     roles: ['DOCTOR']
                 }
             },
-            // Analytics Routes - Direct children of main layout
+
+            // Analytics Routes
             {
                 path: 'analytics/dashboard',
                 name: 'AnalyticsDashboard',
-                component: () => import('@/views/analytics/DashboardView.vue'),
+                component: () => import('../views/analytics/DashboardView.vue'),
                 meta: {
                     title: 'Analytics Dashboard',
                     roles: ['DOCTOR', 'ADMIN']
@@ -282,7 +333,7 @@ const routes = [
             {
                 path: 'analytics/patients',
                 name: 'PatientAnalytics',
-                component: () => import('@/views/analytics/PatientAnalyticsView.vue'),
+                component: () => import('../views/analytics/PatientAnalyticsView.vue'),
                 meta: {
                     title: 'Patient Analytics',
                     roles: ['DOCTOR', 'ADMIN']
@@ -291,7 +342,7 @@ const routes = [
             {
                 path: 'analytics/studies',
                 name: 'StudyAnalytics',
-                component: () => import('@/views/analytics/StudyAnalyticsView.vue'),
+                component: () => import('../views/analytics/StudyAnalyticsView.vue'),
                 meta: {
                     title: 'Study Analytics',
                     roles: ['DOCTOR', 'ADMIN']
@@ -300,7 +351,7 @@ const routes = [
             {
                 path: 'analytics/reports',
                 name: 'ReportAnalytics',
-                component: () => import('@/views/analytics/ReportAnalyticsView.vue'),
+                component: () => import('../views/analytics/ReportAnalyticsView.vue'),
                 meta: {
                     title: 'Report Analytics',
                     roles: ['DOCTOR', 'ADMIN']
@@ -309,7 +360,7 @@ const routes = [
             {
                 path: 'analytics/system',
                 name: 'SystemAnalytics',
-                component: () => import('@/views/analytics/SystemAnalyticsView.vue'),
+                component: () => import('../views/analytics/SystemAnalyticsView.vue'),
                 meta: {
                     title: 'System Analytics',
                     roles: ['ADMIN']

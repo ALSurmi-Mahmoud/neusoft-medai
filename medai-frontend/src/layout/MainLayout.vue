@@ -23,14 +23,43 @@
             <span>Dashboard</span>
           </el-menu-item>
 
+          <!-- ✅ SEARCH SUBMENU -->
+          <el-sub-menu index="search-menu">
+            <template #title>
+              <el-icon><Search /></el-icon>
+              <span>Search</span>
+            </template>
+            <el-menu-item index="/search">
+              <el-icon><Search /></el-icon>
+              <span>Global Search</span>
+            </el-menu-item>
+            <el-menu-item index="/saved-searches">
+              <el-icon><Star /></el-icon>
+              <span>Saved Searches</span>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- ✅ UPDATED ADMIN SUBMENU -->
           <el-sub-menu index="admin">
             <template #title>
               <el-icon><Setting /></el-icon>
               <span>Administration</span>
             </template>
+            <el-menu-item index="/admin/dashboard">
+              <el-icon><Odometer /></el-icon>
+              <span>Admin Panel</span>
+            </el-menu-item>
             <el-menu-item index="/admin/users">
               <el-icon><User /></el-icon>
               <span>User Management</span>
+            </el-menu-item>
+            <el-menu-item index="/admin/settings">
+              <el-icon><Setting /></el-icon>
+              <span>System Settings</span>
+            </el-menu-item>
+            <el-menu-item index="/admin/logs">
+              <el-icon><Document /></el-icon>
+              <span>Activity Logs</span>
             </el-menu-item>
             <el-menu-item index="/admin/system">
               <el-icon><Monitor /></el-icon>
@@ -42,7 +71,6 @@
             </el-menu-item>
           </el-sub-menu>
 
-          <!-- ✅ NEW: ANALYTICS SUBMENU FOR ADMIN -->
           <el-sub-menu index="analytics">
             <template #title>
               <el-icon><DataAnalysis /></el-icon>
@@ -80,13 +108,11 @@
             <span>Treatment Plans</span>
           </el-menu-item>
 
-          <!-- ✅ MY EXPORTS -->
           <el-menu-item index="/exports">
             <el-icon><Download /></el-icon>
             <span>My Exports</span>
           </el-menu-item>
 
-          <!-- MESSAGES MENU ITEM FOR ADMIN -->
           <el-menu-item index="/messages">
             <el-icon><ChatDotRound /></el-icon>
             <span>Messages</span>
@@ -105,6 +131,22 @@
             <span>Dashboard</span>
           </el-menu-item>
 
+          <!-- ✅ SEARCH SUBMENU -->
+          <el-sub-menu index="search-menu">
+            <template #title>
+              <el-icon><Search /></el-icon>
+              <span>Search</span>
+            </template>
+            <el-menu-item index="/search">
+              <el-icon><Search /></el-icon>
+              <span>Global Search</span>
+            </el-menu-item>
+            <el-menu-item index="/saved-searches">
+              <el-icon><Star /></el-icon>
+              <span>Saved Searches</span>
+            </el-menu-item>
+          </el-sub-menu>
+
           <el-menu-item index="/worklist">
             <el-icon><Tickets /></el-icon>
             <span>My Worklist</span>
@@ -120,7 +162,6 @@
             <span>Studies</span>
           </el-menu-item>
 
-          <!-- ✅ NEW: ANALYTICS SUBMENU FOR DOCTOR -->
           <el-sub-menu index="analytics">
             <template #title>
               <el-icon><DataAnalysis /></el-icon>
@@ -159,7 +200,6 @@
             <span>Reports</span>
           </el-menu-item>
 
-          <!-- ✅ MY EXPORTS -->
           <el-menu-item index="/exports">
             <el-icon><Download /></el-icon>
             <span>My Exports</span>
@@ -170,7 +210,6 @@
             <span>Appointments</span>
           </el-menu-item>
 
-          <!-- MESSAGES MENU ITEM FOR DOCTOR -->
           <el-menu-item index="/messages">
             <el-icon><ChatDotRound /></el-icon>
             <span>Messages</span>
@@ -189,6 +228,12 @@
             <span>Dashboard</span>
           </el-menu-item>
 
+          <!-- ✅ SEARCH for Nurses -->
+          <el-menu-item index="/search">
+            <el-icon><Search /></el-icon>
+            <span>Search</span>
+          </el-menu-item>
+
           <el-menu-item index="/nurse/schedule">
             <el-icon><Calendar /></el-icon>
             <span>Schedule</span>
@@ -205,6 +250,12 @@
           <el-menu-item index="/researcher-dashboard">
             <el-icon><Odometer /></el-icon>
             <span>Dashboard</span>
+          </el-menu-item>
+
+          <!-- ✅ SEARCH for Researchers -->
+          <el-menu-item index="/search">
+            <el-icon><Search /></el-icon>
+            <span>Search</span>
           </el-menu-item>
 
           <el-menu-item index="/studies">
@@ -245,7 +296,6 @@
             <span>My Prescriptions</span>
           </el-menu-item>
 
-          <!-- MESSAGES MENU ITEM FOR PATIENT -->
           <el-menu-item index="/my-messages">
             <el-icon><ChatDotRound /></el-icon>
             <span>My Messages</span>
@@ -263,13 +313,26 @@
 
     <!-- Main Content -->
     <el-container>
+      <!-- ✅ UPDATED HEADER WITH SEARCH BAR -->
       <el-header class="header">
         <div class="header-left">
-          <el-breadcrumb separator="/">
+          <el-button
+              :icon="isCollapsed ? Expand : Fold"
+              @click="toggleCollapse"
+              circle
+              class="toggle-btn"
+          />
+          <el-breadcrumb separator="/" class="breadcrumb">
             <el-breadcrumb-item :to="{ path: dashboardPath }">Home</el-breadcrumb-item>
             <el-breadcrumb-item>{{ currentPageTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
+
+        <!-- ✅ SEARCH BAR IN CENTER -->
+        <div class="header-center">
+          <SearchBar />
+        </div>
+
         <div class="header-right">
           <!-- NOTIFICATION BELL -->
           <NotificationBell />
@@ -312,11 +375,14 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import NotificationBell from '../components/NotificationBell.vue'
+import SearchBar from '../components/SearchBar.vue'
 import {
   FirstAidKit,
   TrendCharts,
   ChatDotRound,
-  DataAnalysis  // ✅ NEW: Analytics icon
+  DataAnalysis,
+  Search,
+  Star
 } from '@element-plus/icons-vue'
 import {
   Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
@@ -329,7 +395,8 @@ export default {
     Odometer, FolderOpened, Upload, Calendar, Tickets, Document, Connection,
     Setting, User, Monitor, List, Cpu, Download, ArrowDown, SwitchButton, Expand, Fold,
     FirstAidKit, TrendCharts, ChatDotRound, NotificationBell,
-    DataAnalysis  // ✅ NEW: Register Analytics icon
+    DataAnalysis, Search, Star,
+    SearchBar
   },
   setup() {
     const route = useRoute()
@@ -390,7 +457,9 @@ export default {
 </script>
 
 <style scoped>
-.main-layout { height: 100vh; }
+.main-layout {
+  height: 100vh;
+}
 
 .sidebar {
   background-color: #001529;
@@ -416,44 +485,148 @@ export default {
   overflow-y: auto;
 }
 
-.sidebar-menu:not(.el-menu--collapse) { width: 100%; }
+.sidebar-menu:not(.el-menu--collapse) {
+  width: 100%;
+}
 
 .sidebar-footer {
   padding: 10px;
   border-top: 1px solid #0c2135;
 }
 
-.collapse-btn { width: 100%; color: #fff; }
+.collapse-btn {
+  width: 100%;
+  color: #fff;
+}
 
+/* ✅ UPDATED HEADER STYLES */
 .header {
   background-color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 20px;
+  gap: 20px;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.toggle-btn {
+  flex-shrink: 0;
+}
+
+.breadcrumb {
+  min-width: 0;
+}
+
+/* ✅ SEARCH BAR CENTER SECTION */
+.header-center {
+  flex: 1;
+  max-width: 600px;
+  margin: 0 20px;
+  min-width: 0;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
-.user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+
+.user-info:hover {
+  background-color: var(--el-fill-color-light);
+}
 
 .user-avatar {
   background: linear-gradient(135deg, #409eff 0%, #337ecc 100%);
   color: white;
 }
 
-.user-details { display: flex; flex-direction: column; }
-.user-name { font-weight: 500; font-size: 14px; }
-.user-role-badge { font-size: 10px; color: #909399; text-transform: uppercase; }
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.user-role-badge {
+  font-size: 10px;
+  color: #909399;
+  text-transform: uppercase;
+}
 
 .main-content {
   background-color: #f0f2f5;
   padding: 20px;
   overflow-y: auto;
+}
+
+/* ✅ RESPONSIVE DESIGN */
+@media (max-width: 1200px) {
+  .header-center {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 10px;
+    gap: 10px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .breadcrumb {
+    display: none;
+  }
+
+  .header-center {
+    max-width: 300px;
+    margin: 0 10px;
+  }
+
+  .user-details {
+    display: none;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-center {
+    flex: 1;
+    max-width: none;
+    margin: 0 5px;
+  }
+
+  .toggle-btn {
+    display: none;
+  }
 }
 </style>
